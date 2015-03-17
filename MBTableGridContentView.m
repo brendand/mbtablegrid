@@ -635,6 +635,10 @@ NSString * const MBTableGridTrackingPartKey = @"part";
     }
 }
 
+- (void)dealloc {
+	[[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
 #pragma mark Cursor Rects
 
 - (void)resetCursorRects
