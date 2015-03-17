@@ -167,6 +167,9 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		[contentScrollView setHasHorizontalScroller:YES];
 		[contentScrollView setHasVerticalScroller:YES];
 		[contentScrollView setAutohidesScrollers:YES];
+		[contentScrollView setDrawsBackground:YES];
+		contentScrollView.backgroundColor = [NSColor colorWithWhite:0.98 alpha:1.0];
+		
 		[self addSubview:contentScrollView];
 
 		// We want to synchronize the scroll views
@@ -179,8 +182,8 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(contentViewDidScroll:) name:NSViewBoundsDidChangeNotification object:[contentScrollView contentView]];
         
 		// Set the default selection
-		self.selectedColumnIndexes = [NSIndexSet indexSetWithIndex:0];
-		self.selectedRowIndexes = [NSIndexSet indexSetWithIndex:0];
+		self.selectedColumnIndexes = [NSIndexSet indexSet];
+		self.selectedRowIndexes = [NSIndexSet indexSet];
 		self.allowsMultipleSelection = YES;
 
 		// Set the default sticky edges
@@ -271,7 +274,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		[[NSGraphicsContext currentContext] restoreGraphicsState];
 		[self setKeyboardFocusRingNeedsDisplayInRect:[self bounds]];
 	}
-
+	
 	// Draw the corner header
 	NSRect cornerRect = [self headerRectOfCorner];
 	[self _drawCornerHeaderBackgroundInRect:cornerRect];
@@ -446,6 +449,10 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (void)moveUp:(id)sender {
+	if (_numberOfRows == 0 || _numberOfColumns == 0) {
+		return;
+	}
+	
 	NSUInteger column = [self.selectedColumnIndexes firstIndex];
 	NSUInteger row = [self.selectedRowIndexes firstIndex];
 
@@ -479,6 +486,11 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (void)moveUpAndModifySelection:(id)sender {
+	
+	if (_numberOfRows == 0 || _numberOfColumns == 0) {
+		return;
+	}
+	
 	if (shouldOverrideModifiers) {
 		[self moveLeft:sender];
 		shouldOverrideModifiers = NO;
@@ -523,6 +535,11 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (void)moveDown:(id)sender {
+	
+	if (_numberOfRows == 0 || _numberOfColumns == 0) {
+		return;
+	}
+	
 	NSUInteger column = [self.selectedColumnIndexes firstIndex];
 	NSUInteger row = [self.selectedRowIndexes firstIndex];
 
@@ -557,6 +574,11 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (void)moveDownAndModifySelection:(id)sender {
+	
+	if (_numberOfRows == 0 || _numberOfColumns == 0) {
+		return;
+	}
+	
 	if (shouldOverrideModifiers) {
 		[self moveDown:sender];
 		shouldOverrideModifiers = NO;
@@ -602,6 +624,11 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (void)moveLeft:(id)sender {
+	
+	if (_numberOfRows == 0 || _numberOfColumns == 0) {
+		return;
+	}
+	
 	NSUInteger column = [self.selectedColumnIndexes firstIndex];
 	NSUInteger row = [self.selectedRowIndexes firstIndex];
 
@@ -635,6 +662,11 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (void)moveLeftAndModifySelection:(id)sender {
+	
+	if (_numberOfRows == 0 || _numberOfColumns == 0) {
+		return;
+	}
+	
 	if (shouldOverrideModifiers) {
 		[self moveLeft:sender];
 		shouldOverrideModifiers = NO;
@@ -680,6 +712,11 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (void)moveRight:(id)sender {
+	
+	if (_numberOfRows == 0 || _numberOfColumns == 0) {
+		return;
+	}
+	
 	NSUInteger column = [self.selectedColumnIndexes firstIndex];
 	NSUInteger row = [self.selectedRowIndexes firstIndex];
 
@@ -714,6 +751,11 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (void)moveRightAndModifySelection:(id)sender {
+	
+	if (_numberOfRows == 0 || _numberOfColumns == 0) {
+		return;
+	}
+	
 	if (shouldOverrideModifiers) {
 		[self moveRight:sender];
 		shouldOverrideModifiers = NO;
@@ -783,6 +825,11 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (void)deleteBackward:(id)sender {
+	
+	if (_numberOfRows == 0 || _numberOfColumns == 0) {
+		return;
+	}
+	
 	// Clear the contents of every selected cell
 	NSUInteger column = [self.selectedColumnIndexes firstIndex];
 	while (column <= [self.selectedColumnIndexes lastIndex]) {
@@ -1161,16 +1208,63 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	else {
 		_numberOfRows = 0;
 	}
-    
+	
+	// When data are reloaded, it is possible that previous internal data refer to rows or columns that are no longer
+	// valid, so we validate them here.
+	
+	// Validate selectedRowIndexes
+	{
+		// Assume everything is fine
+		NSIndexSet *validatedRowIndexes = selectedRowIndexes;
+		
+		if (_numberOfRows == 0) {
+			validatedRowIndexes = [NSIndexSet indexSet];
+		} else if ([selectedRowIndexes count] == 0) {
+			validatedRowIndexes = [NSIndexSet indexSetWithIndex:0];
+		} else if ([selectedRowIndexes firstIndex] >= _numberOfRows || [selectedRowIndexes lastIndex] >= _numberOfRows) {
+			// Select an existing row close to the first previously selected row
+			NSUInteger rowToSelect = MIN([selectedRowIndexes firstIndex], _numberOfRows - 1);
+			validatedRowIndexes = [NSIndexSet indexSetWithIndex:rowToSelect];
+		}
+		
+		[self setSelectedRowIndexes:validatedRowIndexes];
+	}
+	
+	// Validate selectedColumnIndexes
+	{
+		// Assume everything is fine
+		NSIndexSet *validatedColumnIndexes = selectedColumnIndexes;
+		
+		if (_numberOfColumns == 0) {
+			validatedColumnIndexes = [NSIndexSet indexSet];
+		} else if ([selectedColumnIndexes count] == 0) {
+			validatedColumnIndexes = [NSIndexSet indexSetWithIndex:0];
+		} else if ([selectedColumnIndexes firstIndex] >= _numberOfColumns || [selectedColumnIndexes lastIndex] >= _numberOfColumns) {
+			// Select an existing column close to the first previously selected column
+			NSUInteger columnToSelect = MIN([selectedColumnIndexes firstIndex], _numberOfColumns - 1);
+			validatedColumnIndexes = [NSIndexSet indexSetWithIndex:columnToSelect];
+		}
+		
+		[self setSelectedColumnIndexes:validatedColumnIndexes];
+	}
+
+	columnWidths = [NSMutableDictionary new];
+	
     [self populateColumnInfo];
-
+	
 	// Update the content view's size
-	NSUInteger lastColumn = _numberOfColumns - 1;
-	NSUInteger lastRow = _numberOfRows - 1;
-	NSRect bottomRightCellFrame = [contentView frameOfCellAtColumn:lastColumn row:lastRow];
-
-	NSRect contentRect = NSMakeRect([contentView frame].origin.x, [contentView frame].origin.y, NSMaxX(bottomRightCellFrame), NSMaxY(bottomRightCellFrame));
+	NSRect contentRect = NSZeroRect;
+	
+	if (_numberOfColumns > 0 && _numberOfRows > 0) {
+		NSUInteger lastColumn = _numberOfColumns-1; // _numberOfColumns must be > 0
+		NSUInteger lastRow = _numberOfRows-1; // _numberOfRows must be > 0
+		NSRect bottomRightCellFrame = [contentView frameOfCellAtColumn:lastColumn row:lastRow];
+		
+		contentRect = NSMakeRect([contentView frame].origin.x, [contentView frame].origin.y, NSMaxX(bottomRightCellFrame), NSMaxY(bottomRightCellFrame));
+	}
+	
 	[contentView setFrameSize:contentRect.size];
+	
 
 	// Update the column header view's size
 	NSRect columnHeaderFrame = [columnHeaderView frame];
@@ -1472,7 +1566,6 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	}
 }
 
-
 @end
 
 @implementation MBTableGrid (DataAccessors)
@@ -1518,12 +1611,14 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
     if ([[self dataSource] respondsToSelector:@selector(tableGrid:formatterForColumn:)]) {
         return [[self dataSource] tableGrid:self formatterForColumn:columnIndex];
     }
-    return nil;
+	return nil;
 }
 
 - (NSCell *)_cellForColumn:(NSUInteger)columnIndex {
-	if ([[self dataSource] respondsToSelector:@selector(tableGrid:cellForColumn:)]) {
-		return [[self dataSource] tableGrid:self cellForColumn:columnIndex];
+	if (_numberOfColumns > 0) {
+		if ([[self dataSource] respondsToSelector:@selector(tableGrid:cellForColumn:)]) {
+			return [[self dataSource] tableGrid:self cellForColumn:columnIndex];
+		}
 	}
 	return nil;
 }

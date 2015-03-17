@@ -134,6 +134,10 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 	NSUInteger numberOfColumns = [self tableGrid].numberOfColumns;
 	NSUInteger numberOfRows = [self tableGrid].numberOfRows;
 	
+	if (numberOfRows == 0 || numberOfColumns == 0) {
+		return;
+	}
+	
 	NSUInteger firstColumn = NSNotFound;
 	NSUInteger lastColumn = numberOfColumns - 1;
 	NSUInteger firstRow = NSNotFound;
@@ -946,7 +950,9 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 {
 	NSRect rect = NSZeroRect;
 	BOOL foundRect = NO;
-	if (columnIndex < [self tableGrid].numberOfColumns) {
+	NSInteger numberOfColumns = [self tableGrid].numberOfColumns;
+	
+	if (columnIndex < numberOfColumns) {
 		NSValue *cachedRectValue = [self tableGrid].columnRects[@(columnIndex)];
 		if (cachedRectValue) {
 			rect = [cachedRectValue rectValue];
@@ -954,7 +960,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		}
 	}
 	
-	if (!foundRect) {
+	if (!foundRect && numberOfColumns > 0) {
 		float width = [[self tableGrid] _widthForColumn:columnIndex];
 		
 		rect = NSMakeRect(0, 0, width, [self frame].size.height);

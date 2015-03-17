@@ -69,29 +69,31 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 - (void)placeSortButtons
 {
 	NSMutableArray *capturingButtons = [NSMutableArray arrayWithCapacity:0];
-
+	
 	NSButton *sortButton;
-
+	
 	MBTableGrid *tableGrid = [self tableGrid];
-
-	for (NSNumber *cellNumber in self.indicatorImageColumns)
-	{
-		sortButton = [[NSButton alloc] init];
-		[sortButton setImage:self.indicatorImage];
-		[sortButton setAlternateImage:self.indicatorReverseImage];
-		[sortButton setBordered:NO];
-		[sortButton setState:NSOnState];
-		sortButton.tag = [cellNumber integerValue];
-		[sortButton setTarget:tableGrid];
-		[sortButton setAction:@selector(sortButtonClicked:)];
-
-		[self addSubview:sortButton];
-		
-		[sortButton setNextState];
-		
-		[capturingButtons addObject:sortButton];
+	NSUInteger numberOfColumns = tableGrid.numberOfColumns;
+	
+	if (numberOfColumns > 0) {
+		for (NSNumber *cellNumber in self.indicatorImageColumns)
+		{
+			sortButton = [[NSButton alloc] init];
+			[sortButton setImage:self.indicatorImage];
+			[sortButton setAlternateImage:self.indicatorReverseImage];
+			[sortButton setBordered:NO];
+			[sortButton setState:NSOnState];
+			sortButton.tag = [cellNumber integerValue];
+			[sortButton setTarget:tableGrid];
+			[sortButton setAction:@selector(sortButtonClicked:)];
+			
+			[self addSubview:sortButton];
+			
+			[sortButton setNextState];
+			
+			[capturingButtons addObject:sortButton];
+		}
 	}
-
 
 	tableGrid.sortButtons = [[NSArray alloc] initWithArray:capturingButtons];
 }
@@ -128,19 +130,20 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 	}
 }
 
-- (void)viewWillDraw
-{
+- (void)viewWillDraw {
 	[super viewWillDraw];
-
 	
-	for (NSNumber *columnNumber in self.indicatorImageColumns)
-	{
-		NSInteger column = [columnNumber integerValue];
-
-		NSRect headerRect = [self headerRectOfColumn:column];
-
-
-		[self layoutSortButtonWithRect:headerRect forColumn:column];
+	NSUInteger numberOfColumns = [self tableGrid].numberOfColumns;
+	if (numberOfColumns > 0) {
+		for (NSNumber *columnNumber in self.indicatorImageColumns)
+		{
+			NSInteger column = [columnNumber integerValue];
+			
+			NSRect headerRect = [self headerRectOfColumn:column];
+			
+			
+			[self layoutSortButtonWithRect:headerRect forColumn:column];
+		}
 	}
 }
 
