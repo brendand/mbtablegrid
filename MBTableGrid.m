@@ -67,6 +67,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 - (float)_setWidthForColumn:(NSUInteger)columnIndex;
 - (id)_backgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (BOOL)_canEditCellAtColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+- (BOOL)_canFillCellAtColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (void)_userDidEnterInvalidStringInColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex errorDescription:(NSString *)errorDescription;
 - (NSCell *)_footerCellForColumn:(NSUInteger)columnIndex;
 - (id)_footerValueForColumn:(NSUInteger)columnIndex;
@@ -1699,6 +1700,20 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		return [[self delegate] tableGrid:self shouldEditColumn:columnIndex row:rowIndex];
 	}
 
+	return YES;
+}
+
+- (BOOL)_canFillCellAtColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
+	// Can't edit if the data source doesn't implement the method
+	if (![[self dataSource] respondsToSelector:@selector(tableGrid:setObjectValue:forColumn:row:)]) {
+		return NO;
+	}
+	
+	// Ask the delegate if the cell is editable
+	if ([[self delegate] respondsToSelector:@selector(tableGrid:shouldFillColumn:row:)]) {
+		return [[self delegate] tableGrid:self shouldFillColumn:columnIndex row:rowIndex];
+	}
+	
 	return YES;
 }
 

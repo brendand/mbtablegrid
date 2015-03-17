@@ -48,6 +48,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 - (NSArray *)_autocompleteValuesForEditString:(NSString *)editString column:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (void)_setObjectValue:(id)value forColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (BOOL)_canEditCellAtColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+- (BOOL)_canFillCellAtColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (void)_setStickyColumn:(MBTableGridEdge)stickyColumn row:(MBTableGridEdge)stickyRow;
 - (float)_widthForColumn:(NSUInteger)columnIndex;
 - (id)_backgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
@@ -667,17 +668,23 @@ NSString * const MBTableGridTrackingPartKey = @"part";
     for (NSTrackingArea *trackingArea in self.trackingAreas) {
         [self removeTrackingArea:trackingArea];
     }
-    
-    if (selectedColumns.count == 1) {
-        NSRect fillTrackingRect = [self rectOfColumn:[selectedColumns firstIndex]];
-        fillTrackingRect.size.height = self.frame.size.height;
-        NSRect topFillTrackingRect, bottomFillTrackingRect;
-        
-        NSDivideRect(fillTrackingRect, &topFillTrackingRect, &bottomFillTrackingRect, selectionRect.origin.y + (selectionRect.size.height / 2.0), CGRectMinYEdge);
-        
-        [self addTrackingArea:[[NSTrackingArea alloc] initWithRect:topFillTrackingRect options:NSTrackingMouseEnteredAndExited | NSTrackingActiveInKeyWindow owner:self userInfo:@{MBTableGridTrackingPartKey : @(MBTableGridTrackingPartFillTop)}]];
-        [self addTrackingArea:[[NSTrackingArea alloc] initWithRect:bottomFillTrackingRect options:NSTrackingMouseEnteredAndExited | NSTrackingActiveInKeyWindow owner:self userInfo:@{MBTableGridTrackingPartKey : @(MBTableGridTrackingPartFillBottom)}]];
-    }
+	
+	if (selectedColumns.count == 1) {
+		
+		BOOL canFill = [[self tableGrid] _canFillCellAtColumn:[selectedColumns firstIndex] row:[selectedRows firstIndex]];
+		
+		if (canFill) {
+			
+			NSRect fillTrackingRect = [self rectOfColumn:[selectedColumns firstIndex]];
+			fillTrackingRect.size.height = self.frame.size.height;
+			NSRect topFillTrackingRect, bottomFillTrackingRect;
+			
+			NSDivideRect(fillTrackingRect, &topFillTrackingRect, &bottomFillTrackingRect, selectionRect.origin.y + (selectionRect.size.height / 2.0), CGRectMinYEdge);
+			
+			[self addTrackingArea:[[NSTrackingArea alloc] initWithRect:topFillTrackingRect options:NSTrackingMouseEnteredAndExited | NSTrackingActiveInKeyWindow owner:self userInfo:@{MBTableGridTrackingPartKey : @(MBTableGridTrackingPartFillTop)}]];
+			[self addTrackingArea:[[NSTrackingArea alloc] initWithRect:bottomFillTrackingRect options:NSTrackingMouseEnteredAndExited | NSTrackingActiveInKeyWindow owner:self userInfo:@{MBTableGridTrackingPartKey : @(MBTableGridTrackingPartFillBottom)}]];
+		}
+	}
 }
 
 #pragma mark -

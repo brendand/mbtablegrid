@@ -225,6 +225,16 @@ NSString * const ColumnText4 = @"text4";
 	return YES;
 }
 
+- (BOOL)tableGrid:(MBTableGrid *)aTableGrid shouldFillColumn:(NSUInteger)columnIndex row:(NSInteger)rowIndex {
+	
+	NSString *columnIdentifier = self.columnIdentifiers[columnIndex];
+	if (columnIdentifier == ColumnImage) {
+		return NO;
+	} else {
+		return YES;
+	}
+}
+
 - (NSFormatter *)tableGrid:(MBTableGrid *)aTableGrid formatterForColumn:(NSUInteger)columnIndex
 {
     NSString *columnIdentifier = self.columnIdentifiers[columnIndex];
