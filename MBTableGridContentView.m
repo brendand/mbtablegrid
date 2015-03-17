@@ -106,7 +106,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		[_defaultCell setScrollable:YES];
 		[_defaultCell setLineBreakMode:NSLineBreakByTruncatingTail];
 		
-		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(mylistener:) name:@"NSMenuDidChangeItemNotification" object:nil];
+		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(mylistener:) name:@"NSMenuDidChangeItemNotification" object:self];
 	}
 	return self;
 }
