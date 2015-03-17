@@ -87,6 +87,9 @@
 		cellFrame.size.width -= accessoryButtonFrame.size.width + 2;
 	}
 
+	static CGFloat TEXT_PADDING = 4;
+	cellFrame = NSInsetRect(cellFrame, TEXT_PADDING, 0);
+	
 	[self drawInteriorWithFrame:cellFrame inView:controlView];
 }
 

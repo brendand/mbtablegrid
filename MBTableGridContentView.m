@@ -34,6 +34,7 @@
 
 #define kGRAB_HANDLE_HALF_SIDE_LENGTH 3.0f
 #define kGRAB_HANDLE_SIDE_LENGTH 6.0f
+#define kCELL_EDIT_HORIZONTAL_PADDING 4.0f
 
 NSString * const MBTableGridTrackingPartKey = @"part";
 
@@ -924,7 +925,8 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 	} else {
 		NSText *editor = [[self window] fieldEditor:YES forObject:self];
 		editor.delegate = self;
-		cellFrame.size.width -= 4.0;
+		
+		cellFrame = NSInsetRect(cellFrame, kCELL_EDIT_HORIZONTAL_PADDING, 0);
 		[selectedCell editWithFrame:cellFrame inView:self editor:editor delegate:self event:nil];
 		
 		
