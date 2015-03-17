@@ -1227,7 +1227,7 @@ typedef enum {
  *  @param      columnIndexes    Column indexes of the cells being copied.
  *  @param      rowIndexes       Row indexes of the cells being copied.
  */
-- (BOOL)tableGrid:(MBTableGrid *)aTableGrid shouldFillColumn:(NSUInteger)columnIndex row:(NSInteger)rowIndex;
+- (BOOL)tableGrid:(MBTableGrid *)aTableGrid shouldFillColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 
 /**
  *  @brief      Informs the delegate that an invalid string was entered in a cell

@@ -225,7 +225,7 @@ NSString * const ColumnText4 = @"text4";
 	return YES;
 }
 
-- (BOOL)tableGrid:(MBTableGrid *)aTableGrid shouldFillColumn:(NSUInteger)columnIndex row:(NSInteger)rowIndex {
+- (BOOL)tableGrid:(MBTableGrid *)aTableGrid shouldFillColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
 	
 	NSString *columnIdentifier = self.columnIdentifiers[columnIndex];
 	if (columnIdentifier == ColumnImage) {
