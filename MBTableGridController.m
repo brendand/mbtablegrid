@@ -119,6 +119,7 @@ NSString * const ColumnText4 = @"text4";
 	
 	
 	self.textCell = [[MBTableGridCell alloc] initTextCell:@""];
+	self.textCell.lineBreakMode = NSLineBreakByTruncatingTail;
 	
 	self.checkboxCell = [[MBButtonCell alloc] init];
 	self.checkboxCell.state = NSOffState;

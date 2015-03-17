@@ -916,8 +916,10 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 	} else {
 		NSText *editor = [[self window] fieldEditor:YES forObject:self];
 		editor.delegate = self;
+		cellFrame.size.width -= 4.0;
 		[selectedCell editWithFrame:cellFrame inView:self editor:editor delegate:self event:nil];
-        
+		
+		
         NSFormatter *formatter = [[self tableGrid] _formatterForColumn:selectedColumn];
         
         if (formatter && ![currentValue isEqual:@""]) {
@@ -1140,8 +1142,8 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 	
 	// Set the color in the current graphics context
 	
-	[[NSColor darkGrayColor] setStroke];
-	[[NSColor colorWithCalibratedRed:0.996 green:0.827 blue:0.176 alpha:1.000] setFill];
+	[[NSColor colorWithCalibratedRed:0.648 green:0.482 blue:0.227 alpha:1.000] setStroke];
+	[[NSColor colorWithCalibratedRed:0.991 green:0.798 blue:0.139 alpha:1.000] setFill];
 	
 	// Create our circle path
 	NSRect rect = NSMakeRect(1.0, 1.0, kGRAB_HANDLE_SIDE_LENGTH - 2.0, kGRAB_HANDLE_SIDE_LENGTH - 2.0);
