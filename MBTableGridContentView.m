@@ -46,7 +46,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 - (void)_accessoryButtonClicked:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (NSArray *)_availableObjectValuesForColumn:(NSUInteger)columnIndex;
 - (NSArray *)_autocompleteValuesForEditString:(NSString *)editString column:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
-- (void)_setObjectValue:(id)value forColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+- (void)_setObjectValue:(id)value forColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex undoTitle:(NSString *)undoTitle;
 - (BOOL)_canEditCellAtColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (BOOL)_canFillCellAtColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (void)_setStickyColumn:(MBTableGridEdge)stickyColumn row:(MBTableGridEdge)stickyRow;
@@ -374,7 +374,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 	// the value parameter becomes the MBTableGridContentView
 	// object for some reason.
 	if ([value isKindOfClass:[NSNumber class]]) {
-		[[self tableGrid] _setObjectValue:value forColumn:selectedColumn row:selectedRow];
+		[[self tableGrid] _setObjectValue:value forColumn:selectedColumn row:selectedRow undoTitle:@"Change Rating"];
 		NSRect cellFrame = [[self tableGrid] frameOfCellAtColumn:selectedColumn row:selectedRow];
 		[[self tableGrid] setNeedsDisplayInRect:cellFrame];
 	}
@@ -595,7 +595,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		id value = [[self tableGrid] _objectValueForColumn:mouseDownColumn row:mouseDownRow];
 		
 		[[self tableGrid].selectedRowIndexes enumerateIndexesUsingBlock:^(NSUInteger idx, BOOL *stop) {
-			[[self tableGrid] _setObjectValue:[value copy] forColumn:mouseDownColumn row:idx];
+			[[self tableGrid] _setObjectValue:[value copy] forColumn:mouseDownColumn row:idx undoTitle:@"Fill"];
 		}];
 		
         NSInteger numberOfRows = [self tableGrid].numberOfRows;
@@ -728,10 +728,10 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 	NSFormatter *formatter = [[self tableGrid] _formatterForColumn:editedColumn];
 	BOOL success = [formatter getObjectValue:&objectValue forString:stringValue errorDescription:&errorDescription];
 	if (formatter && success) {
-		[[self tableGrid] _setObjectValue:objectValue forColumn:editedColumn row:editedRow];
+		[[self tableGrid] _setObjectValue:objectValue forColumn:editedColumn row:editedRow undoTitle:@"Entry"];
 	}
 	else if (!formatter) {
-		[[self tableGrid] _setObjectValue:stringValue forColumn:editedColumn row:editedRow];
+		[[self tableGrid] _setObjectValue:stringValue forColumn:editedColumn row:editedRow undoTitle:@"Entry"];
 	}
 	else {
 		[[self tableGrid] _userDidEnterInvalidStringInColumn:editedColumn row:editedRow errorDescription:errorDescription];
@@ -864,7 +864,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 	if ([selectedCell isKindOfClass:[MBButtonCell class]]) {
 		id currentValue = [[self tableGrid] _objectValueForColumn:selectedColumn row:selectedRow];
 		selectedCell.objectValue = @(![currentValue boolValue]);
-		[[self tableGrid] _setObjectValue:selectedCell.objectValue forColumn:selectedColumn row:selectedRow];
+		[[self tableGrid] _setObjectValue:selectedCell.objectValue forColumn:selectedColumn row:selectedRow undoTitle:@"Checkbox"];
 
 		return;
 		
@@ -894,7 +894,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 			}
 		}
 		
-		[[self tableGrid] _setObjectValue:cell.objectValue forColumn:selectedColumn row:selectedRow];
+		[[self tableGrid] _setObjectValue:cell.objectValue forColumn:selectedColumn row:selectedRow undoTitle:@"Change Rating"];
 
 		editedColumn = NSNotFound;
 		editedRow = NSNotFound;
@@ -953,7 +953,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 	MBPopupButtonCell *cell = (MBPopupButtonCell *)[[self tableGrid] _cellForColumn:editedColumn];
 	[cell selectItem:menuItem];
 
-	[[self tableGrid] _setObjectValue:menuItem.title forColumn:editedColumn row:editedRow];
+	[[self tableGrid] _setObjectValue:menuItem.title forColumn:editedColumn row:editedRow undoTitle:@"Menu Choice"];
 	
 	editedColumn = NSNotFound;
 	editedRow = NSNotFound;

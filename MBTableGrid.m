@@ -45,6 +45,12 @@ CGFloat MBTableHeaderMinimumColumnWidth = 60.0f;
 NSString *MBTableGridColumnDataType = @"mbtablegrid.pasteboard.column";
 NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
+@interface MBTableGrid ()
+
+@property (nonatomic, strong) NSUndoManager *cachedUndoManager;
+
+@end
+
 @interface MBTableGrid (Drawing)
 - (void)_drawColumnHeaderBackgroundInRect:(NSRect)aRect;
 - (void)_drawRowHeaderBackgroundInRect:(NSRect)aRect;
@@ -62,7 +68,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 - (void)_accessoryButtonClicked:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (NSArray *)_availableObjectValuesForColumn:(NSUInteger)columnIndex;
 - (NSArray *)_autocompleteValuesForEditString:(NSString *)editString column:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
-- (void)_setObjectValue:(id)value forColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+- (void)_setObjectValue:(id)value forColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex undoTitle:(NSString *)undoTitle;
 - (float)_widthForColumn:(NSUInteger)columnIndex;
 - (float)_setWidthForColumn:(NSUInteger)columnIndex;
 - (id)_backgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
@@ -88,6 +94,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 - (void)_setStickyColumn:(MBTableGridEdge)stickyColumn row:(MBTableGridEdge)stickyRow;
 - (MBTableGridEdge)_stickyColumn;
 - (MBTableGridEdge)_stickyRow;
+- (NSUndoManager *)_undoManager;
 @end
 
 @interface MBTableGridContentView (Private)
@@ -181,6 +188,10 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(columnFooterViewDidScroll:) name:NSViewBoundsDidChangeNotification object:[columnFooterScrollView contentView]];
         
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(contentViewDidScroll:) name:NSViewBoundsDidChangeNotification object:[contentScrollView contentView]];
+        
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(didUndoOrRedo:) name:NSUndoManagerDidUndoChangeNotification object:nil];
+        
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(didUndoOrRedo:) name:NSUndoManagerDidRedoChangeNotification object:nil];
         
 		// Set the default selection
 		self.selectedColumnIndexes = [NSIndexSet indexSet];
@@ -836,7 +847,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	while (column <= [self.selectedColumnIndexes lastIndex]) {
 		NSUInteger row = [self.selectedRowIndexes firstIndex];
 		while (row <= [self.selectedRowIndexes lastIndex]) {
-			[self _setObjectValue:nil forColumn:column row:row];
+			[self _setObjectValue:nil forColumn:column row:row undoTitle:@"Clear"];
 			row++;
 		}
 		column++;
@@ -937,6 +948,11 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
     [self syncronizeScrollView:rowHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
     [self syncronizeScrollView:columnFooterScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
     
+}
+
+- (void)didUndoOrRedo:(NSNotification *)aNotification {
+    
+    [self reloadData];
 }
 
 #pragma mark -
@@ -1648,8 +1664,15 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	return nil;
 }
 
-- (void)_setObjectValue:(id)value forColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
+- (void)_setObjectValue:(id)value forColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex undoTitle:(NSString *)undoTitle {
 	if ([[self dataSource] respondsToSelector:@selector(tableGrid:setObjectValue:forColumn:row:)]) {
+        
+        NSUndoManager *undoManager = [self _undoManager];
+        id oldValue = [self _objectValueForColumn:columnIndex row:rowIndex];
+        
+        [[undoManager prepareWithInvocationTarget:self] _setObjectValue:oldValue forColumn:columnIndex row:rowIndex undoTitle:undoTitle];
+        undoManager.actionName = undoTitle;
+        
 		[[self dataSource] tableGrid:self setObjectValue:value forColumn:columnIndex row:rowIndex];
 	}
 }
@@ -1771,6 +1794,18 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 - (MBTableGridEdge)_stickyRow {
 	return stickyRowEdge;
+}
+
+- (NSUndoManager *)_undoManager {
+    if (!self.cachedUndoManager && [[self delegate] respondsToSelector:@selector(undoManagerForTableGrid:)]) {
+        self.cachedUndoManager = [[self delegate] undoManagerForTableGrid:self];
+    }
+    
+    if (!self.cachedUndoManager) {
+        self.cachedUndoManager = self.window.undoManager;
+    }
+    
+    return self.cachedUndoManager;
 }
 
 @end

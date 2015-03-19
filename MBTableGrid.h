@@ -143,7 +143,7 @@ typedef enum {
     
     NSMutableDictionary *columnWidths;
 	NSMutableArray *columnIndexNames;
-	
+    
 }
 
 #pragma mark -
@@ -1280,5 +1280,14 @@ typedef enum {
  * @param		rowIndexes		An index set describing the rows that were added.
  */
 - (void)tableGrid:(MBTableGrid *)aTableGrid didAddRows:(NSIndexSet *)rowIndexes;
+
+#pragma mark Undo
+
+/**
+ * @brief		Enables the delegate to provide an undo manager; if not implemented or nil is returned, the window's one is used.
+ *
+ * @param		aTableGrid		The table grid object.
+ */
+- (NSUndoManager *)undoManagerForTableGrid:(MBTableGrid *)aTableGrid;
 
 @end

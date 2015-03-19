@@ -747,6 +747,11 @@ NSString * const ColumnText4 = @"text4";
     // Add the rows to the database, or whatever is needed
 }
 
+- (NSUndoManager *)undoManagerForTableGrid:(MBTableGrid *)aTableGrid;
+{
+    return aTableGrid.window.undoManager;
+}
+
 #pragma mark - QuickLook
 
 -(void)quickLookAction:(id)sender {
