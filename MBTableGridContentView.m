@@ -206,9 +206,11 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 				}
 				
 				if ([_cell isKindOfClass:[MBPopupButtonCell class]]) {
-					MBPopupButtonCell *cell = (MBPopupButtonCell *)_cell;
-					NSInteger index = [cell indexOfItemWithTitle:objectValue];
-					[_cell setObjectValue:@(index)];
+					if (objectValue) {
+						MBPopupButtonCell *cell = (MBPopupButtonCell *)_cell;
+						NSInteger index = [cell indexOfItemWithTitle:objectValue];
+						[_cell setObjectValue:@(index)];
+					}
 				} else {
 					[_cell setObjectValue:objectValue];
 				}
