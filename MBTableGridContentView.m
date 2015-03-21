@@ -58,6 +58,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 - (NSCell *)_footerCellForColumn:(NSUInteger)columnIndex;
 - (id)_footerValueForColumn:(NSUInteger)columnIndex;
 - (void)_setFooterValue:(id)value forColumn:(NSUInteger)columnIndex;
+- (BOOL)_isGroupRow:(NSUInteger)rowIndex;
 @end
 
 @interface MBTableGridContentView (Cursors)
@@ -108,6 +109,10 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		[_defaultCell setScrollable:YES];
 		[_defaultCell setLineBreakMode:NSLineBreakByTruncatingTail];
 		
+		_groupRowColor = [NSColor colorWithCalibratedWhite:0.900 alpha:1.000];
+		_groupRowFont = [NSFont boldSystemFontOfSize:[NSFont systemFontSize]];
+		_groupRowTextColor = [NSColor colorWithCalibratedWhite:0.400 alpha:1.000];
+		
 		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(mylistener:) name:@"NSMenuDidChangeItemNotification" object:self];
 	}
 	return self;
@@ -125,6 +130,20 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		[popupCell synchronizeTitleAndSelectedItem];
 		//[popupCell setTitle:[[popupCell selectedItem] title]];
 		//[popupCell selectItemWithTitle:[[popupCell selectedItem] title]];
+	}
+}
+
+- (void)cacheGroupRows {
+	if (!_groupRowIndexes) {
+		_groupRowIndexes = [NSMutableDictionary dictionary];
+		NSUInteger numberOfRows = [self tableGrid].numberOfRows;
+		NSUInteger row = 0;
+		while (row < numberOfRows) {
+			if ([[self tableGrid] _isGroupRow:row]) {
+				_groupRowIndexes[@(row)] = [NSValue valueWithRect:[self rectOfRow:row]];
+			}
+			row++;
+		}
 	}
 }
 
@@ -158,6 +177,10 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		column++;
 	}
 	
+	// Cache group rows
+	
+	[self cacheGroupRows];
+	
 	// Find the rows to draw
 	NSUInteger row = 0;
 	while (row < numberOfRows) {
@@ -171,85 +194,98 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		row++;
 	}	
 	
-	column = firstColumn;
-	while (column <= lastColumn) {
-		row = firstRow;
-		while (row <= lastRow) {
-			NSRect cellFrame = [self frameOfCellAtColumn:column row:row];
-			// Only draw the cell if we need to
-			NSCell *_cell = [[self tableGrid] _cellForColumn:column];
-			
-			// If we need to draw then check if we're a popup button. This may be a bit of
-			// a hack, but it seems to clear up the problem with the popup button clearing
-			// if you don't select a value. It's the editedRow and editedColumn bits that
-			// cause the problem. However, if you remove the row and column condition, then
-			// if you type into a text field, the text doesn't get cleared first before you
-			// start typing. So this seems to make both conditions work.
-			
-			if ([self needsToDrawRect:cellFrame] && (!(row == editedRow && column == editedColumn) || [_cell isKindOfClass:[MBPopupButtonCell class]])) {
-				
-                NSColor *backgroundColor = [[self tableGrid] _backgroundColorForColumn:column row:row] ?: [NSColor whiteColor];
-				
-				if (!_cell) {
-					_cell = _defaultCell;
-				}
-				
-				[_cell setFormatter:nil]; // An exception is raised if the formatter is not set to nil before changing at runtime
-				[_cell setFormatter:[[self tableGrid] _formatterForColumn:column]];
-				
-				id objectValue = nil;
-				
-				if (isFilling && [selectedColumns containsIndex:column] && [selectedRows containsIndex:row]) {
-					objectValue = [[self tableGrid] _objectValueForColumn:mouseDownColumn row:mouseDownRow];
-				} else {
-					objectValue = [[self tableGrid] _objectValueForColumn:column row:row];
-				}
-				
-				if ([_cell isKindOfClass:[MBPopupButtonCell class]]) {
-					if (objectValue) {
-						MBPopupButtonCell *cell = (MBPopupButtonCell *)_cell;
-						NSInteger index = [cell indexOfItemWithTitle:objectValue];
-						[_cell setObjectValue:@(index)];
-					}
-				} else {
-					[_cell setObjectValue:objectValue];
-				}
-				
-				if ([_cell isKindOfClass:[MBPopupButtonCell class]]) {
-					
-					MBPopupButtonCell *cell = (MBPopupButtonCell *)_cell;
-					[cell drawWithFrame:cellFrame inView:self withBackgroundColor:backgroundColor];// Draw background color
-					
-				} else if ([_cell isKindOfClass:[MBImageCell class]]) {
-					
-					MBImageCell *cell = (MBImageCell *)_cell;
-                    
-                    cell.accessoryButtonImage = [[self tableGrid] _accessoryButtonImageForColumn:column row:row];
-					
-					[cell drawWithFrame:cellFrame inView:self withBackgroundColor:backgroundColor];// Draw background color
-					
-				} else if ([_cell isKindOfClass:[MBLevelIndicatorCell class]]) {
-					
-					MBLevelIndicatorCell *cell = (MBLevelIndicatorCell *)_cell;
+	row = firstRow;
+	while (row <= lastRow) {
 
-					cell.target = self;
-					cell.action = @selector(updateLevelIndicator:);
+		NSValue *rowRectValue = _groupRowIndexes[@(row)];
+		if (rowRectValue) {
+			NSRect rowFrame = [self rectOfRow:row];
+			id objectValue = [[self tableGrid] _objectValueForColumn:0 row:row];
+			_defaultCell.font = _groupRowFont;
+			_defaultCell.textColor = _groupRowTextColor;
+			_defaultCell.objectValue = objectValue;
+			[_defaultCell drawWithFrame:rowFrame inView:self withBackgroundColor:_groupRowColor];
+			
+		} else {
+			
+			column = firstColumn;
+			while (column <= lastColumn) {
+				NSRect cellFrame = [self frameOfCellAtColumn:column row:row];
+				// Only draw the cell if we need to
+				NSCell *_cell = [[self tableGrid] _cellForColumn:column];
+				
+				// If we need to draw then check if we're a popup button. This may be a bit of
+				// a hack, but it seems to clear up the problem with the popup button clearing
+				// if you don't select a value. It's the editedRow and editedColumn bits that
+				// cause the problem. However, if you remove the row and column condition, then
+				// if you type into a text field, the text doesn't get cleared first before you
+				// start typing. So this seems to make both conditions work.
+				
+				if ([self needsToDrawRect:cellFrame] && (!(row == editedRow && column == editedColumn) || [_cell isKindOfClass:[MBPopupButtonCell class]])) {
 					
-					[cell drawWithFrame:cellFrame inView:[self tableGrid] withBackgroundColor:backgroundColor];// Draw background color
+					NSColor *backgroundColor = [[self tableGrid] _backgroundColorForColumn:column row:row] ?: [NSColor whiteColor];
 					
-				} else {
+					if (!_cell) {
+						_cell = _defaultCell;
+					}
 					
-					MBTableGridCell *cell = (MBTableGridCell *)_cell;
-                    
-                    cell.accessoryButtonImage = [[self tableGrid] _accessoryButtonImageForColumn:column row:row];
-                    
-					[cell drawWithFrame:cellFrame inView:self withBackgroundColor:backgroundColor];// Draw background color
+					[_cell setFormatter:nil]; // An exception is raised if the formatter is not set to nil before changing at runtime
+					[_cell setFormatter:[[self tableGrid] _formatterForColumn:column]];
 					
+					id objectValue = nil;
+					
+					if (isFilling && [selectedColumns containsIndex:column] && [selectedRows containsIndex:row]) {
+						objectValue = [[self tableGrid] _objectValueForColumn:mouseDownColumn row:mouseDownRow];
+					} else {
+						objectValue = [[self tableGrid] _objectValueForColumn:column row:row];
+					}
+					
+					if ([_cell isKindOfClass:[MBPopupButtonCell class]]) {
+						if (objectValue) {
+							MBPopupButtonCell *cell = (MBPopupButtonCell *)_cell;
+							NSInteger index = [cell indexOfItemWithTitle:objectValue];
+							[_cell setObjectValue:@(index)];
+						}
+					} else {
+						[_cell setObjectValue:objectValue];
+					}
+					
+					if ([_cell isKindOfClass:[MBPopupButtonCell class]]) {
+						
+						MBPopupButtonCell *cell = (MBPopupButtonCell *)_cell;
+						[cell drawWithFrame:cellFrame inView:self withBackgroundColor:backgroundColor];// Draw background color
+						
+					} else if ([_cell isKindOfClass:[MBImageCell class]]) {
+						
+						MBImageCell *cell = (MBImageCell *)_cell;
+						
+						cell.accessoryButtonImage = [[self tableGrid] _accessoryButtonImageForColumn:column row:row];
+						
+						[cell drawWithFrame:cellFrame inView:self withBackgroundColor:backgroundColor];// Draw background color
+						
+					} else if ([_cell isKindOfClass:[MBLevelIndicatorCell class]]) {
+						
+						MBLevelIndicatorCell *cell = (MBLevelIndicatorCell *)_cell;
+						
+						cell.target = self;
+						cell.action = @selector(updateLevelIndicator:);
+						
+						[cell drawWithFrame:cellFrame inView:[self tableGrid] withBackgroundColor:backgroundColor];// Draw background color
+						
+					} else {
+						
+						MBTableGridCell *cell = (MBTableGridCell *)_cell;
+						
+						cell.accessoryButtonImage = [[self tableGrid] _accessoryButtonImageForColumn:column row:row];
+						
+						[cell drawWithFrame:cellFrame inView:self withBackgroundColor:backgroundColor];// Draw background color
+						
+					}
 				}
+				column++;
 			}
-			row++;
 		}
-		column++;
+		row++;
 	}
 	
 	// Draw the selection rectangle
@@ -394,6 +430,11 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 	NSPoint mouseLocationInContentView = [self convertPoint:[theEvent locationInWindow] fromView:nil];
 	mouseDownColumn = [self columnAtPoint:mouseLocationInContentView];
 	mouseDownRow = [self rowAtPoint:mouseLocationInContentView];
+	
+	if (_groupRowIndexes[@(mouseDownRow)]) {
+		mouseDownRow = NSNotFound;
+		return;
+	}
     
     // If the column wasn't found, probably need to flush the cached column rects
     if (mouseDownColumn == NSNotFound) {
@@ -662,8 +703,13 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 	selectionRect.size.height = NSMaxY(selectionBottomRight)-selectionTopLeft.origin.y;
 
 	[self addCursorRect:selectionRect cursor:[NSCursor arrowCursor]];
-
 	[self addCursorRect:[self visibleRect] cursor:[self _cellSelectionCursor]];
+
+	[_groupRowIndexes enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+		NSRect rectOfRow = [self rectOfRow:[key integerValue]];
+		[self addCursorRect:rectOfRow cursor:[NSCursor arrowCursor]];
+	}];
+	
     [self addCursorRect:grabHandleRect cursor:[self _cellExtendSelectionCursor]];
     
     // Update tracking areas here, to leverage the selection variables

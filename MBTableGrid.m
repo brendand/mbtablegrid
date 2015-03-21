@@ -78,6 +78,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 - (NSCell *)_footerCellForColumn:(NSUInteger)columnIndex;
 - (id)_footerValueForColumn:(NSUInteger)columnIndex;
 - (void)_setFooterValue:(id)value forColumn:(NSUInteger)columnIndex;
+- (BOOL)_isGroupRow:(NSUInteger)rowIndex;
 @end
 
 @interface MBTableGrid (DragAndDrop)
@@ -104,14 +105,6 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 @end
 
 @implementation MBTableGrid
-
-@synthesize allowsMultipleSelection;
-@synthesize dataSource;
-@synthesize delegate;
-@synthesize selectedColumnIndexes;
-@synthesize selectedRowIndexes;
-@synthesize sortButtons;
-
 
 #pragma mark -
 #pragma mark Initialization & Superclass Overrides
@@ -194,8 +187,8 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(didUndoOrRedo:) name:NSUndoManagerDidRedoChangeNotification object:nil];
         
 		// Set the default selection
-		self.selectedColumnIndexes = [NSIndexSet indexSet];
-		self.selectedRowIndexes = [NSIndexSet indexSet];
+		_selectedColumnIndexes = [NSIndexSet indexSet];
+		_selectedRowIndexes = [NSIndexSet indexSet];
 		self.allowsMultipleSelection = YES;
 
 		// Set the default sticky edges
@@ -477,14 +470,23 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	}
 
 	// If we're already at the first row, do nothing
-	if (row <= 0)
+	if (row <= 0 || (row == 1 && [self _isGroupRow:row - 1]))
 		return;
 
-	// If the Shift key was not held, move the selection
-	self.selectedColumnIndexes = [NSIndexSet indexSetWithIndex:column];
-	self.selectedRowIndexes = [NSIndexSet indexSetWithIndex:(row - 1)];
-
 	if (row > 0) {
+		// moving up, but previous row is a group row, so go to the previous non-group row
+		BOOL isGroupRow = YES;
+		while (row > 0 && isGroupRow) {
+			isGroupRow = [self _isGroupRow:row - 1];
+			if (isGroupRow) {
+				row--;
+			}
+		}
+		
+		// If the Shift key was not held, move the selection
+		self.selectedColumnIndexes = [NSIndexSet indexSetWithIndex:column];
+		self.selectedRowIndexes = [NSIndexSet indexSetWithIndex:(row - 1)];
+
 		NSRect cellRect = [self frameOfCellAtColumn:column row:row - 1];
 		cellRect = [self convertRect:cellRect toView:self.contentView];
 		if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
@@ -529,11 +531,22 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		// If the bottom edge is sticky, expand the contraction
 		firstRow--;
 	}
-	self.selectedRowIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(firstRow, lastRow - firstRow + 1)];
 
 	NSUInteger column = [self.selectedColumnIndexes firstIndex];
 
 	if (firstRow - 1 > 0) {
+		
+		// moving up, but previous row is a group row, so go to the previous non-group row
+		BOOL isGroupRow = YES;
+		while (firstRow > 0 && isGroupRow) {
+			isGroupRow = [self _isGroupRow:firstRow];
+			if (isGroupRow) {
+				firstRow--;
+			}
+		}
+
+		self.selectedRowIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(firstRow, lastRow - firstRow + 1)];
+
 		NSRect cellRect = [self frameOfCellAtColumn:column row:firstRow - 1];
 		cellRect = [self convertRect:cellRect toView:contentScrollView.contentView];
 		if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
@@ -564,14 +577,24 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	}
 
 	// If we're already at the last row, do nothing
-	if (row >= (_numberOfRows - 1))
+	if (row >= (_numberOfRows - 1) || (row == (_numberOfRows - 1) && [self _isGroupRow:row + 1]))
 		return;
 
-	// If the Shift key was not held, move the selection
-	self.selectedColumnIndexes = [NSIndexSet indexSetWithIndex:column];
-	self.selectedRowIndexes = [NSIndexSet indexSetWithIndex:(row + 1)];
-
 	if (row + 1 < [self numberOfRows]) {
+		
+		// moving down, but next row is a group row, so go to the next non-group row
+		BOOL isGroupRow = YES;
+		while (row + 1 < [self numberOfRows] && isGroupRow) {
+			isGroupRow = [self _isGroupRow:row + 1];
+			if (isGroupRow) {
+				row++;
+			}
+		}
+
+		// If the Shift key was not held, move the selection
+		self.selectedColumnIndexes = [NSIndexSet indexSetWithIndex:column];
+		self.selectedRowIndexes = [NSIndexSet indexSetWithIndex:(row + 1)];
+
 		NSRect cellRect = [self frameOfCellAtColumn:column row:row + 1];
 		cellRect = [self convertRect:cellRect toView:contentScrollView.contentView];
 		if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
@@ -617,11 +640,22 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		// If the bottom edge is sticky, expand the contraction
 		firstRow++;
 	}
-	self.selectedRowIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(firstRow, lastRow - firstRow + 1)];
 
 	NSUInteger column = [self.selectedColumnIndexes lastIndex];
 
 	if (lastRow + 1 < [self numberOfRows]) {
+		
+		// moving down, but next row is a group row, so go to the next non-group row
+		BOOL isGroupRow = YES;
+		while (lastRow < [self numberOfRows] && isGroupRow) {
+			isGroupRow = [self _isGroupRow:lastRow];
+			if (isGroupRow) {
+				lastRow++;
+			}
+		}
+
+		self.selectedRowIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(firstRow, lastRow - firstRow + 1)];
+
 		NSRect cellRect = [self frameOfCellAtColumn:column row:lastRow + 1];
 		cellRect = [self convertRect:cellRect toView:contentScrollView.contentView];
 		if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
@@ -1232,15 +1266,19 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	// Validate selectedRowIndexes
 	{
 		// Assume everything is fine
-		NSIndexSet *validatedRowIndexes = selectedRowIndexes;
+		NSIndexSet *validatedRowIndexes = _selectedRowIndexes;
 		
-		if (_numberOfRows == 0) {
+		if (_numberOfRows == 0 || (_numberOfRows == 1 && [self _isGroupRow:0])) {
 			validatedRowIndexes = [NSIndexSet indexSet];
-		} else if ([selectedRowIndexes count] == 0) {
-			validatedRowIndexes = [NSIndexSet indexSetWithIndex:0];
-		} else if ([selectedRowIndexes firstIndex] >= _numberOfRows || [selectedRowIndexes lastIndex] >= _numberOfRows) {
+		} else if ([_selectedRowIndexes count] == 0) {
+			if ([self _isGroupRow:0]) {
+				validatedRowIndexes = [NSIndexSet indexSetWithIndex:1];
+			} else {
+				validatedRowIndexes = [NSIndexSet indexSetWithIndex:0];
+			}
+		} else if ([_selectedRowIndexes firstIndex] >= _numberOfRows || [_selectedRowIndexes lastIndex] >= _numberOfRows) {
 			// Select an existing row close to the first previously selected row
-			NSUInteger rowToSelect = MIN([selectedRowIndexes firstIndex], _numberOfRows - 1);
+			NSUInteger rowToSelect = MIN([_selectedRowIndexes firstIndex], _numberOfRows - 1);
 			validatedRowIndexes = [NSIndexSet indexSetWithIndex:rowToSelect];
 		}
 		
@@ -1250,15 +1288,15 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	// Validate selectedColumnIndexes
 	{
 		// Assume everything is fine
-		NSIndexSet *validatedColumnIndexes = selectedColumnIndexes;
+		NSIndexSet *validatedColumnIndexes = _selectedColumnIndexes;
 		
 		if (_numberOfColumns == 0) {
 			validatedColumnIndexes = [NSIndexSet indexSet];
-		} else if ([selectedColumnIndexes count] == 0) {
+		} else if ([_selectedColumnIndexes count] == 0) {
 			validatedColumnIndexes = [NSIndexSet indexSetWithIndex:0];
-		} else if ([selectedColumnIndexes firstIndex] >= _numberOfColumns || [selectedColumnIndexes lastIndex] >= _numberOfColumns) {
+		} else if ([_selectedColumnIndexes firstIndex] >= _numberOfColumns || [_selectedColumnIndexes lastIndex] >= _numberOfColumns) {
 			// Select an existing column close to the first previously selected column
-			NSUInteger columnToSelect = MIN([selectedColumnIndexes firstIndex], _numberOfColumns - 1);
+			NSUInteger columnToSelect = MIN([_selectedColumnIndexes firstIndex], _numberOfColumns - 1);
 			validatedColumnIndexes = [NSIndexSet indexSetWithIndex:columnToSelect];
 		}
 		
@@ -1266,6 +1304,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	}
 
 	columnWidths = [NSMutableDictionary new];
+	[self.columnRects removeAllObjects];
 	
     [self populateColumnInfo];
 	
@@ -1308,6 +1347,8 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 																  scrollerStyle:NSScrollerStyleOverlay];
 	}
 	[columnFooterView setFrameSize:columnHeaderFrame.size];
+	
+	contentView.groupRowIndexes = nil;
     
 	[self setNeedsDisplay:YES];
 }
@@ -1402,7 +1443,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 #pragma mark - Overridden Property Accessors
 
 - (void)setSelectedColumnIndexes:(NSIndexSet *)anIndexSet {
-	if (anIndexSet == selectedColumnIndexes)
+	if (anIndexSet == _selectedColumnIndexes)
 		return;
 
 
@@ -1419,7 +1460,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		anIndexSet = [[self delegate] tableGrid:self willSelectColumnsAtIndexPath:anIndexSet];
 	}
 
-	selectedColumnIndexes = anIndexSet;
+	_selectedColumnIndexes = anIndexSet;
 
 	[self setNeedsDisplay:YES];
 	// then, enumerate all the new inndexes, and call setNeedsdisplaayInRect on them.
@@ -1435,7 +1476,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (void)setSelectedRowIndexes:(NSIndexSet *)anIndexSet {
-	if (anIndexSet == selectedColumnIndexes)
+	if (anIndexSet == _selectedColumnIndexes)
 		return;
 
 
@@ -1444,7 +1485,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		anIndexSet = [[self delegate] tableGrid:self willSelectRowsAtIndexPath:anIndexSet];
 	}
 
-	selectedRowIndexes = anIndexSet;
+	_selectedRowIndexes = anIndexSet;
 
 	[self setNeedsDisplay:YES];
 
@@ -1453,27 +1494,27 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (void)setDelegate:(id <MBTableGridDelegate> )anObject {
-	if (anObject == delegate)
+	if (anObject == _delegate)
 		return;
 
-	if (delegate) {
+	if (_delegate) {
 		// Unregister the delegate for relavent notifications
-		[[NSNotificationCenter defaultCenter] removeObserver:delegate name:MBTableGridDidChangeSelectionNotification object:self];
-		[[NSNotificationCenter defaultCenter] removeObserver:delegate name:MBTableGridDidMoveColumnsNotification object:self];
-		[[NSNotificationCenter defaultCenter] removeObserver:delegate name:MBTableGridDidMoveRowsNotification object:self];
+		[[NSNotificationCenter defaultCenter] removeObserver:_delegate name:MBTableGridDidChangeSelectionNotification object:self];
+		[[NSNotificationCenter defaultCenter] removeObserver:_delegate name:MBTableGridDidMoveColumnsNotification object:self];
+		[[NSNotificationCenter defaultCenter] removeObserver:_delegate name:MBTableGridDidMoveRowsNotification object:self];
 	}
 
-	delegate = anObject;
+	_delegate = anObject;
 
 	// Register the new delegate for relavent notifications
-	if ([delegate respondsToSelector:@selector(tableGridDidChangeSelection:)]) {
-		[[NSNotificationCenter defaultCenter] addObserver:delegate selector:@selector(tableGridDidChangeSelection:) name:MBTableGridDidChangeSelectionNotification object:self];
+	if ([_delegate respondsToSelector:@selector(tableGridDidChangeSelection:)]) {
+		[[NSNotificationCenter defaultCenter] addObserver:_delegate selector:@selector(tableGridDidChangeSelection:) name:MBTableGridDidChangeSelectionNotification object:self];
 	}
-	if ([delegate respondsToSelector:@selector(tableGridDidMoveColumns:)]) {
-		[[NSNotificationCenter defaultCenter] addObserver:delegate selector:@selector(tableGridDidMoveColumns:) name:MBTableGridDidMoveColumnsNotification object:self];
+	if ([_delegate respondsToSelector:@selector(tableGridDidMoveColumns:)]) {
+		[[NSNotificationCenter defaultCenter] addObserver:_delegate selector:@selector(tableGridDidMoveColumns:) name:MBTableGridDidMoveColumnsNotification object:self];
 	}
-	if ([delegate respondsToSelector:@selector(tableGridDidMoveRows:)]) {
-		[[NSNotificationCenter defaultCenter] addObserver:delegate selector:@selector(tableGridDidMoveRows:) name:MBTableGridDidMoveRowsNotification object:self];
+	if ([_delegate respondsToSelector:@selector(tableGridDidMoveRows:)]) {
+		[[NSNotificationCenter defaultCenter] addObserver:_delegate selector:@selector(tableGridDidMoveRows:) name:MBTableGridDidMoveRowsNotification object:self];
 	}
 }
 
@@ -1732,7 +1773,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		return NO;
 	}
 	
-	// Ask the delegate if the cell is editable
+	// Ask the delegate if the cell is fillable
 	if ([[self delegate] respondsToSelector:@selector(tableGrid:shouldFillColumn:row:)]) {
 		return [[self delegate] tableGrid:self shouldFillColumn:columnIndex row:rowIndex];
 	}
@@ -1750,6 +1791,15 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	if ([[self delegate] respondsToSelector:@selector(tableGrid:accessoryButtonClicked:row:)]) {
 		[[self delegate] tableGrid:self accessoryButtonClicked:columnIndex row:rowIndex];
 	}
+}
+
+- (BOOL)_isGroupRow:(NSUInteger)rowIndex {
+	// Ask the delegate if the cell is fillable
+	if ([[self delegate] respondsToSelector:@selector(tableGrid:isGroupRow:)]) {
+		return [[self delegate] tableGrid:self isGroupRow:rowIndex];
+	}
+	
+	return NO;
 }
 
 #pragma mark Footer

@@ -109,12 +109,6 @@ typedef enum {
 	/* Headers */
 	MBTableGridHeaderCell *headerCell;
 	
-	/* Data Source */
-	IBOutlet id <MBTableGridDataSource> __unsafe_unretained dataSource;
-	
-	/* Delegate */
-	IBOutlet id <MBTableGridDelegate> __unsafe_unretained delegate;
-	
 	/* Headers */
 	NSScrollView *columnHeaderScrollView;
 	MBTableGridHeaderView *columnHeaderView;
@@ -128,13 +122,8 @@ typedef enum {
 	/* Content */
 	NSScrollView *contentScrollView;
 	MBTableGridContentView *contentView;
-	
-	/* Selections */
-	NSIndexSet *selectedColumnIndexes;
-	NSIndexSet *selectedRowIndexes;
-	
+		
 	/* Behavior */
-	BOOL allowsMultipleSelection;
 	BOOL shouldOverrideModifiers;
 	
 	/* Sticky Edges (for Shift+Arrow expansions) */
@@ -374,7 +363,7 @@ typedef enum {
  *
  * @see			delegate
  */
-@property(unsafe_unretained) id <MBTableGridDataSource> dataSource;
+@property(nonatomic, weak) IBOutlet id <MBTableGridDataSource> dataSource;
 
 /**
  * @brief		The object that acts as the delegate of the 
@@ -385,7 +374,7 @@ typedef enum {
  *
  * @see			dataSource
  */
-@property(nonatomic, unsafe_unretained) id <MBTableGridDelegate> delegate;
+@property(nonatomic, weak) IBOutlet id <MBTableGridDelegate> delegate;
 
 /**
  * @}
@@ -1228,6 +1217,16 @@ typedef enum {
  *  @param      rowIndexes       Row indexes of the cells being copied.
  */
 - (BOOL)tableGrid:(MBTableGrid *)aTableGrid shouldFillColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+
+/**
+ *  @brief      Asks the delegate if the specified row is a group row. A group row has only one cell
+ *              that spans across the entire row.
+ *
+ *  @param      aTableGrid       The table grid that contains the cell.
+ *  @param      columnIndexes    Column indexes of the cells being copied.
+ *  @param      rowIndexes       Row indexes of the cells being copied.
+ */
+- (BOOL)tableGrid:(MBTableGrid *)aTableGrid isGroupRow:(NSUInteger)rowIndex;
 
 /**
  *  @brief      Informs the delegate that an invalid string was entered in a cell

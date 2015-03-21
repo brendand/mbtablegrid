@@ -70,7 +70,11 @@ typedef NS_ENUM(NSUInteger, MBTableGridTrackingPart)
     MBTableGridTrackingPart shouldDrawFillPart;
 	
 	MBTableGridCell *_defaultCell;
-    
+	
+	NSColor *_groupRowColor;
+	NSFont *_groupRowFont;
+	NSColor *_groupRowTextColor;
+	
     NSMutableArray *columnWidths;
     
 }
@@ -87,6 +91,12 @@ typedef NS_ENUM(NSUInteger, MBTableGridTrackingPart)
  *				belongs to.
  */
 - (MBTableGrid *)tableGrid;
+
+/**
+ * @brief		A chached set of row indexes to determine which rows are "group" rows
+ */
+@property (nonatomic, strong) NSMutableDictionary *groupRowIndexes;
+
 
 /**
  * @}

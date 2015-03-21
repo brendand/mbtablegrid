@@ -39,6 +39,8 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 - (MBTableGridContentView *)_contentView;
 - (void)_dragColumnsWithEvent:(NSEvent *)theEvent;
 - (void)_dragRowsWithEvent:(NSEvent *)theEvent;
+- (void)sortButtonClicked:(id)sender;
+- (BOOL)_isGroupRow:(NSUInteger)row;
 @end
 
 @implementation MBTableGridHeaderView
@@ -189,7 +191,10 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 					[headerCell setSortIndicatorImage:nil];
 				}
 				
-				[headerCell setStringValue:[[self tableGrid] _headerStringForColumn:column]];
+				NSString *stringValue = [[self tableGrid] _headerStringForColumn:column];
+				if (stringValue) {
+					[headerCell setStringValue:stringValue];
+				}
 				[headerCell drawWithFrame:headerRect inView:self];
                 
 			}
@@ -206,13 +211,16 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 		}
         
 	} else if (self.orientation == MBTableHeaderVerticalOrientation) {
+		
 		// Draw the row headers
 		NSUInteger numberOfRows = [self tableGrid].numberOfRows;
 		[headerCell setOrientation:self.orientation];
 		NSUInteger row = 0;
+		NSUInteger rowNumber = 0;
 		while(row < numberOfRows) {
 			NSRect headerRect = [self headerRectOfRow:row];
-			
+			BOOL isGroupRow = [[[[self tableGrid] contentView] groupRowIndexes] objectForKey:@(row)] != nil;
+
 			// Only draw the header if we need to
 			if ([self needsToDrawRect:headerRect]) {
                 
@@ -224,8 +232,17 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 					[headerCell setState:NSOffState];
 				}
 				
-				[headerCell setStringValue:[[self tableGrid] _headerStringForRow:row]];
+				if (!isGroupRow) {
+					NSString *headerValue = [[self tableGrid] _headerStringForRow:rowNumber];
+					[headerCell setStringValue:headerValue];
+				} else {
+					[headerCell setStringValue:@""];
+				}
 				[headerCell drawWithFrame:headerRect inView:self];
+			}
+			
+			if (!isGroupRow) {
+				rowNumber++;
 			}
 			row++;
 		}

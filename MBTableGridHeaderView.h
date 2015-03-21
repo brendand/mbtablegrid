@@ -49,6 +49,7 @@
     BOOL isResizing;
     NSUInteger draggingColumnIndex;
 	
+	NSMutableDictionary *_groupRowIndexes;
 	NSMutableDictionary *columnAutoSaveProperties;
 	
 }
