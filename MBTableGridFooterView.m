@@ -177,9 +177,11 @@
                     [editedPopupCell selectItem:item];
                 }
             }
-            
-            [editedPopupCell.menu popUpMenuPositioningItem:editedPopupCell.selectedItem atLocation:cellFrame.origin inView:self];
-            
+			
+			NSRect popupRect = cellFrame;
+			popupRect.origin.x += cellFrame.size.width - editedPopupCell.menu.size.width;
+			editedPopupCell.menu.font = [NSFont systemFontOfSize:[NSFont systemFontSizeForControlSize:NSSmallControlSize]];
+            [editedPopupCell.menu popUpMenuPositioningItem:editedPopupCell.selectedItem atLocation:popupRect.origin inView:self];
         }
     }
     

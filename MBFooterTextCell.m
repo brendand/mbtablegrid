@@ -11,9 +11,11 @@
 
 - (NSAttributedString *)attributedTitle
 {
-    NSFont *font = [NSFont labelFontOfSize:[NSFont labelFontSize]];
-    NSColor *color = [NSColor controlTextColor];
-    NSDictionary *attributes = @{NSFontAttributeName : font, NSForegroundColorAttributeName : color};
+ 	NSMutableParagraphStyle *paragraphStyle = [[NSMutableParagraphStyle alloc] init];
+	paragraphStyle.alignment = self.alignment;
+	
+    NSDictionary *attributes = @{NSFontAttributeName : self.font, NSForegroundColorAttributeName : self.textColor,
+								 NSParagraphStyleAttributeName : paragraphStyle};
     
     return [[NSAttributedString alloc] initWithString:self.title attributes:attributes];
 }

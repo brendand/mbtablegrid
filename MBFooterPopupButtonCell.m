@@ -29,9 +29,13 @@
 
 - (NSAttributedString *)attributedTitle
 {
-    NSFont *font = [NSFont labelFontOfSize:[NSFont labelFontSize]];
+	NSFont *font = self.font;
 	NSColor *color = [NSColor controlTextColor];
-	NSDictionary *attributes = @{NSFontAttributeName : font, NSForegroundColorAttributeName : color};
+	NSMutableParagraphStyle *paragraphStyle = [[NSMutableParagraphStyle alloc] init];
+	paragraphStyle.alignment = self.alignment;
+	paragraphStyle.lineBreakMode = self.lineBreakMode;
+	NSDictionary *attributes = @{NSFontAttributeName : font, NSForegroundColorAttributeName : color,
+								 NSParagraphStyleAttributeName : paragraphStyle};
 
 	return [[NSAttributedString alloc] initWithString:self.title attributes:attributes];
 }
@@ -39,9 +43,10 @@
 - (void)drawInteriorWithFrame:(NSRect)cellFrame inView:(NSView *)controlView
 {
 	static CGFloat TEXT_PADDING = 6;
+	static CGFloat POPUP_ARROWS_PADDING = 15;
 	NSRect textFrame;
 	CGSize stringSize = self.attributedTitle.size;
-	textFrame = NSMakeRect(cellFrame.origin.x + TEXT_PADDING, cellFrame.origin.y + (cellFrame.size.height - stringSize.height)/2, cellFrame.size.width - TEXT_PADDING, stringSize.height);
+	textFrame = NSMakeRect(cellFrame.origin.x + TEXT_PADDING, cellFrame.origin.y + (cellFrame.size.height - stringSize.height)/2, cellFrame.size.width - TEXT_PADDING - POPUP_ARROWS_PADDING, stringSize.height);
 
 	[[NSGraphicsContext currentContext] saveGraphicsState];
 
