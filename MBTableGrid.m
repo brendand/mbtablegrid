@@ -329,6 +329,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 	// Set new width of column
 	CGFloat currentWidth = [columnWidths[columnKey] floatValue];
+    CGFloat oldWidth = currentWidth;
     CGFloat offset = 0.0;
 	
     currentWidth += distance;
@@ -339,16 +340,13 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
         minColumnWidth += columnHeaderView.indicatorImage.size.width + 2.0f;
     }
     
-    if (currentWidth < minColumnWidth) {
+    if (currentWidth <= minColumnWidth) {
         currentWidth = minColumnWidth;
+        offset = columnRect.origin.x - rowHeaderView.bounds.size.width - location.x + minColumnWidth + contentScrollView.contentView.bounds.origin.x;
+        distance = currentWidth - oldWidth;
     }
 	
     columnWidths[columnKey] = @(currentWidth);
-    
-    if (currentWidth == minColumnWidth) {
-        offset = columnRect.origin.x - location.x + minColumnWidth - self.rowHeaderView.frame.size.width;
-        distance = 0.0;
-    }
     
     // Update views with new sizes
     [contentView setFrameSize:NSMakeSize(NSWidth(contentView.frame) + distance, NSHeight(contentView.frame))];
