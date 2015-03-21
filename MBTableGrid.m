@@ -1781,6 +1781,54 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	return YES;
 }
 
+- (void)_fillInColumn:(NSUInteger)column fromRow:(NSUInteger)row numberOfRowsWhenStarting:(NSUInteger)numberOfRowsWhenStartingFilling {
+    
+    NSInteger numberOfRows = self.numberOfRows;
+    BOOL addedRows = numberOfRows > numberOfRowsWhenStartingFilling;
+    NSIndexSet *addedRowIndexes = nil;
+    
+    if (addedRows) {
+        addedRowIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(numberOfRowsWhenStartingFilling, numberOfRows - numberOfRowsWhenStartingFilling)];
+    }
+    
+    [[[self _undoManager] prepareWithInvocationTarget:self] _undoFillInColumn:column filledRows:self.selectedRowIndexes addedRows:addedRowIndexes];
+    
+    id value = [self _objectValueForColumn:column row:row];
+    
+    [self.selectedRowIndexes enumerateIndexesUsingBlock:^(NSUInteger idx, BOOL *stop) {
+        [self _setObjectValue:[value copy] forColumn:column row:idx undoTitle:@"Fill"];
+    }];
+    
+    // If rows were added, tell the delegate
+    if (addedRows && [self.delegate respondsToSelector:@selector(tableGrid:didAddRows:)]) {
+        [self.delegate tableGrid:self didAddRows:addedRowIndexes];
+    }
+}
+
+- (void)_undoFillInColumn:(NSUInteger)column filledRows:(NSIndexSet *)filledRowIndexes addedRows:(NSIndexSet *)addedRowIndexes {
+    
+    [[[self _undoManager] prepareWithInvocationTarget:self] _redoFillInColumn:column filledRows:filledRowIndexes addedRows:addedRowIndexes];
+    
+    if (addedRowIndexes && [self.dataSource respondsToSelector:@selector(tableGrid:removeRows:)]) {
+        [self.dataSource tableGrid:self removeRows:addedRowIndexes];
+    }
+    
+    self.selectedColumnIndexes = [NSIndexSet indexSetWithIndex:column];
+    self.selectedRowIndexes = [NSIndexSet indexSetWithIndex:filledRowIndexes.firstIndex];
+}
+
+- (void)_redoFillInColumn:(NSUInteger)column filledRows:(NSIndexSet *)filledRowIndexes addedRows:(NSIndexSet *)addedRowIndexes {
+    
+    [[[self _undoManager] prepareWithInvocationTarget:self] _undoFillInColumn:column filledRows:filledRowIndexes addedRows:addedRowIndexes];
+    
+    if (addedRowIndexes && [self.dataSource respondsToSelector:@selector(tableGrid:addRows:)]) {
+        [self.dataSource tableGrid:self addRows:addedRowIndexes.count];
+    }
+    
+    self.selectedColumnIndexes = [NSIndexSet indexSetWithIndex:column];
+    self.selectedRowIndexes = filledRowIndexes;
+}
+
 - (void)_userDidEnterInvalidStringInColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex errorDescription:(NSString *)errorDescription {
     if ([[self delegate] respondsToSelector:@selector(tableGrid:userDidEnterInvalidStringInColumn:row:errorDescription:)]) {
         [[self delegate] tableGrid:self userDidEnterInvalidStringInColumn:columnIndex row:rowIndex errorDescription:errorDescription];

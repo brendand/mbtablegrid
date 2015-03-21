@@ -49,6 +49,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 - (void)_setObjectValue:(id)value forColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex undoTitle:(NSString *)undoTitle;
 - (BOOL)_canEditCellAtColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (BOOL)_canFillCellAtColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+- (void)_fillInColumn:(NSUInteger)column fromRow:(NSUInteger)row numberOfRowsWhenStarting:(NSUInteger)numberOfRowsWhenStartingFilling;
 - (void)_setStickyColumn:(MBTableGridEdge)stickyColumn row:(MBTableGridEdge)stickyRow;
 - (float)_widthForColumn:(NSUInteger)columnIndex;
 - (id)_backgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
@@ -633,21 +634,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 	autoscrollTimer = nil;
 	
 	if (isFilling) {
-		id value = [[self tableGrid] _objectValueForColumn:mouseDownColumn row:mouseDownRow];
-		
-		[[self tableGrid].selectedRowIndexes enumerateIndexesUsingBlock:^(NSUInteger idx, BOOL *stop) {
-			[[self tableGrid] _setObjectValue:[value copy] forColumn:mouseDownColumn row:idx undoTitle:@"Fill"];
-		}];
-		
-        NSInteger numberOfRows = [self tableGrid].numberOfRows;
-        
-        // If rows were added, tell the delegate
-        if (isFilling && numberOfRows > numberOfRowsWhenStartingFilling && [[self tableGrid].delegate respondsToSelector:@selector(tableGrid:didAddRows:)]) {
-            NSIndexSet *rowIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(numberOfRowsWhenStartingFilling, numberOfRows - numberOfRowsWhenStartingFilling)];
-            
-            [[self tableGrid].delegate tableGrid:[self tableGrid] didAddRows:rowIndexes];
-        }
-        
+        [[self tableGrid] _fillInColumn:mouseDownColumn fromRow:mouseDownRow numberOfRowsWhenStarting:numberOfRowsWhenStartingFilling];
 		isFilling = NO;
         
         [[self tableGrid] setNeedsDisplay:YES];
