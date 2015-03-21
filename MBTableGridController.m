@@ -189,6 +189,14 @@ NSString * const ColumnText4 = @"text4";
 
 - (id)tableGrid:(MBTableGrid *)aTableGrid objectValueForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex
 {
+	if (rowIndex == 0) {
+		return @"Group Header 1";
+	}
+	
+	if (rowIndex == 5) {
+		return @"Group Header 2";
+	}
+	
 	if (columnIndex >= [columns count]) {
 		return nil;
 	}
@@ -354,6 +362,13 @@ NSString * const ColumnText4 = @"text4";
         return [NSColor colorWithDeviceWhite:0.950 alpha:1.000];
     else
         return nil;
+}
+
+- (BOOL)tableGrid:(MBTableGrid *)aTableGrid isGroupRow:(NSUInteger)rowIndex {
+	if (rowIndex == 0 || rowIndex == 5) {
+		return YES;
+	}
+	return NO;
 }
 
 #pragma mark Footer
