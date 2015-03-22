@@ -54,6 +54,7 @@ typedef NS_ENUM(NSUInteger, MBTableGridTrackingPart)
 	
 	NSImage *cursorImage;
 	NSImage *cursorExtendSelectionImage;
+	NSImage *cursorFillImage;
     NSImage *grabHandleImage;
     NSRect grabHandleRect;
 	

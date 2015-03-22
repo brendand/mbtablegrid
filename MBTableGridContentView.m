@@ -68,6 +68,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 - (NSCursor *)_cellExtendSelectionCursor;
 - (NSImage *)_cellExtendSelectionCursorImage;
 - (NSImage *)_grabHandleImage;
+- (NSCursor *)_cellFillCursor;
 @end
 
 @interface MBTableGridContentView (DragAndDrop)
@@ -100,7 +101,8 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		// Cache the cursor image
 		cursorImage = [self _cellSelectionCursorImage];
         cursorExtendSelectionImage = [self _cellExtendSelectionCursorImage];
-		
+		cursorFillImage = [NSImage imageNamed:@"VerticalResizeCursor"];
+
         isCompleting = NO;
 		isDraggingColumnOrRow = NO;
         shouldDrawFillPart = MBTableGridTrackingPartNone;
@@ -688,17 +690,21 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 	selectionRect.origin = selectionTopLeft.origin;
 	selectionRect.size.width = NSMaxX(selectionBottomRight)-selectionTopLeft.origin.x;
 	selectionRect.size.height = NSMaxY(selectionBottomRight)-selectionTopLeft.origin.y;
-
-	[self addCursorRect:selectionRect cursor:[NSCursor arrowCursor]];
-	[self addCursorRect:[self visibleRect] cursor:[self _cellSelectionCursor]];
-
-	[_groupRowIndexes enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
-		NSRect rectOfRow = [self rectOfRow:[key integerValue]];
-		[self addCursorRect:rectOfRow cursor:[NSCursor arrowCursor]];
-	}];
 	
-    [self addCursorRect:grabHandleRect cursor:[self _cellExtendSelectionCursor]];
-    
+	if (!isFilling) {
+		[self addCursorRect:selectionRect cursor:[NSCursor arrowCursor]];
+		[self addCursorRect:[self visibleRect] cursor:[self _cellSelectionCursor]];
+		
+		[_groupRowIndexes enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+			NSRect rectOfRow = [self rectOfRow:[key integerValue]];
+			[self addCursorRect:rectOfRow cursor:[NSCursor arrowCursor]];
+		}];
+		
+		[self addCursorRect:grabHandleRect cursor:[self _cellFillCursor]];
+	} else {
+		[self addCursorRect:[self visibleRect] cursor:[self _cellFillCursor]];
+	}
+	
     // Update tracking areas here, to leverage the selection variables
     for (NSTrackingArea *trackingArea in self.trackingAreas) {
         [self removeTrackingArea:trackingArea];
@@ -1083,6 +1089,14 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 @end
 
 @implementation MBTableGridContentView (Cursors)
+
+- (NSCursor *)_cellFillCursor
+{
+	NSPoint hotspot = NSMakePoint(cursorFillImage.size.width / 2, cursorFillImage.size.height / 2);
+	NSCursor *cursor = [[NSCursor alloc] initWithImage:cursorFillImage
+											   hotSpot:hotspot];
+	return cursor;
+}
 
 - (NSCursor *)_cellSelectionCursor
 {
