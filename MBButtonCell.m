@@ -68,7 +68,10 @@
 
 - (NSCellHitResult)hitTestForEvent:(NSEvent *)event inRect:(NSRect)cellFrame ofView:(NSView *)controlView {
     NSRect centeredButtonRect = [self centeredButtonRectInCellFrame:cellFrame];
-    CGPoint eventLocationInControlView = [controlView convertPoint:event.locationInWindow fromView:nil];
+	// controlView is our MBTableGridContentView. But to get the right coordinates,
+	// we need to get them from the NSScrollView's coordinate system. The superview
+	// of the controlView is the NSClipView and the superview of that is the NSScrollView.
+    CGPoint eventLocationInControlView = [controlView.superview.superview convertPoint:event.locationInWindow fromView:nil];
     return CGRectContainsPoint(centeredButtonRect, eventLocationInControlView) ? NSCellHitContentArea : NSCellHitNone;
 }
 
