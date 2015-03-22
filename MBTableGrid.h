@@ -163,6 +163,34 @@ typedef enum {
  */
 - (void)reloadData;
 
+#pragma mark -
+#pragma mark Selecting Rows and Columns
+
+/**
+ * @brief		Scrolls the grid to the specified row
+ *
+ * @param		rowIndex		The row to scroll to
+ * @param		shouldAnimate	Whether the grid should animate the scrolling to the row.
+ *
+ */
+- (void)scrollToRow:(NSUInteger)rowIndex animate:(BOOL)shouldAnimate;
+
+/**
+ * @brief		Selects the specified rows
+ *
+ * @param		rowIndexes		The rows to select
+ *
+ */
+- (void)selectRowIndexes:(NSIndexSet *)rowIndexes;
+
+/**
+ * @brief		Selects the specified row
+ *
+ * @param		rowIndex		The row to select
+ *
+ */
+- (void)selectRow:(NSUInteger)rowIndex;
+
 /**
  * @}
  */
@@ -339,6 +367,15 @@ typedef enum {
 @property (nonatomic) NSString *autosaveName;
 
 - (void)copy:(id)sender;
+
+/**
+ * @brief		Indicates whether the footer is hidden or visible
+ *
+ * @details		The default is \c YES.
+ *
+ * @return		\c YES if the footer is hidden.
+ */
+@property (nonatomic) BOOL footerHidden;
 
 
 /**
@@ -1145,7 +1182,6 @@ typedef enum {
  * @see			tableGrid:willSelectColumnsAtIndexPath:
  */
 - (void)tableGrid:(MBTableGrid *)aTableGrid didDoubleClickColumn:(NSUInteger)columnIndex;
-
 
 /**
  * @}

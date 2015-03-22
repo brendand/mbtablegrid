@@ -82,7 +82,14 @@
 }
 
 - (NSAttributedString *)attributedStringValue {
-	NSFont *font = [NSFont labelFontOfSize:[NSFont labelFontSize]];
+	NSFont *font = nil;
+	
+	if (self.orientation == MBTableHeaderHorizontalOrientation) {
+		font = [NSFont boldSystemFontOfSize:[NSFont systemFontSizeForControlSize:NSSmallControlSize]];
+	} else {
+		font = [NSFont systemFontOfSize:[NSFont systemFontSizeForControlSize:NSSmallControlSize]];
+	}
+	
 	NSColor *color = [NSColor controlTextColor];
 	NSDictionary *attributes = @{ NSFontAttributeName: font, NSForegroundColorAttributeName: color };
 

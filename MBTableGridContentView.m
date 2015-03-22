@@ -977,8 +977,10 @@ NSString * const MBTableGridTrackingPartKey = @"part";
         if (formatter && ![currentValue isEqual:@""]) {
             currentValue = [formatter stringForObjectValue:currentValue];
         }
-        
-		editor.string = currentValue;
+		
+		if (currentValue) {
+			editor.string = currentValue;
+		}
 	}
 }
 

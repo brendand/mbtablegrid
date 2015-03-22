@@ -198,6 +198,8 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		shouldOverrideModifiers = NO;
 		
 		self.columnRects = [NSMutableDictionary dictionary];
+		
+		self.footerHidden = YES;
 	}
 	return self;
 }
@@ -226,6 +228,23 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 - (BOOL)acceptsFirstResponder {
 	return YES;
+}
+
+- (void)setFooterHidden:(BOOL)footerHidden {
+	_footerHidden = footerHidden;
+	NSSize footerSize = columnFooterScrollView.frame.size;
+	NSSize contentScrollSize = contentScrollView.frame.size;
+	NSSize rowHeaderScrollSize = rowHeaderScrollView.frame.size;
+	if (footerHidden) {
+		contentScrollSize.height = self.frame.size.height - columnHeaderScrollView.frame.size.height - 1;
+		rowHeaderScrollSize.height = self.frame.size.height - columnHeaderScrollView.frame.size.height - 1;
+	} else {
+		contentScrollSize.height = self.frame.size.height - footerSize.height - columnHeaderScrollView.frame.size.height;
+		rowHeaderScrollSize.height = self.frame.size.height - footerSize.height - columnHeaderScrollView.frame.size.height;
+	}
+	[contentScrollView setFrameSize:contentScrollSize];
+	[rowHeaderScrollView setFrameSize:rowHeaderScrollSize];
+	[rowHeaderScrollView setNeedsDisplay:YES];
 }
 
 /**
@@ -289,11 +308,16 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	[self _drawColumnHeaderBackgroundInRect:columnHeaderRect];
 
 	// Draw the corner footer
+	
 	NSRect footerRect = [self footerRectOfCorner];
 	[self _drawCornerFooterBackgroundInRect:footerRect];
 
+	CGFloat footerHeight = MBTableGridColumnHeaderHeight;
+	if (_footerHidden) {
+		footerHeight = 0.0;
+	}
 	// Draw the row header background
-	NSRect rowHeaderRect = NSMakeRect(0, NSMaxY(cornerRect), MBTableGridRowHeaderWidth, [self frame].size.height - MBTableGridColumnHeaderHeight * 2);
+	NSRect rowHeaderRect = NSMakeRect(0, NSMaxY(cornerRect), MBTableGridRowHeaderWidth, [self frame].size.height - MBTableGridColumnHeaderHeight + footerHeight);
 	[self _drawRowHeaderBackgroundInRect:rowHeaderRect];
 }
 
@@ -304,7 +328,10 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
     [self.contentView setNeedsDisplay:needsDisplay];
     [columnHeaderView setNeedsDisplay:needsDisplay];
     [rowHeaderView setNeedsDisplay:needsDisplay];
-    [columnFooterView setNeedsDisplay:needsDisplay];
+	
+	if (!_footerHidden) {
+		[columnFooterView setNeedsDisplay:needsDisplay];
+	}
 }
 
 #pragma mark Resize scrollview content size
@@ -844,6 +871,21 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	}
 }
 
+- (void)scrollToRow:(NSUInteger)rowIndex animate:(BOOL)shouldAnimate {
+	NSRect rowRect = [self rectOfRow:rowIndex];
+	[self scrollToArea:rowRect animate:shouldAnimate];
+}
+
+- (void)selectRowIndexes:(NSIndexSet *)rowIndexes {
+	[self scrollToRow:[rowIndexes firstIndex] animate:YES];
+	self.selectedRowIndexes = rowIndexes;
+}
+
+- (void)selectRow:(NSUInteger)rowIndex {
+	self.selectedRowIndexes = [NSIndexSet indexSetWithIndex:rowIndex];
+	[self scrollToRow:rowIndex animate:YES];
+}
+
 - (void)scrollToArea:(NSRect)area animate:(BOOL)shouldAnimate {
 	if (shouldAnimate) {
 		[NSAnimationContext runAnimationGroup: ^(NSAnimationContext *context) {
@@ -853,10 +895,8 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		}];
 	}
 	else {
-//		[contentScrollView.contentView scrollRectToVisible:area];
 		[contentScrollView.contentView scrollToPoint:area.origin];
         [self setNeedsDisplay:YES];
-//		NSLog(@"area: %@", NSStringFromRect(area));
 	}
 }
 
@@ -1337,7 +1377,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 																   scrollerStyle:NSScrollerStyleOverlay];
 	}
 	[rowHeaderView setFrameSize:rowHeaderFrame.size];
-
+	
 	NSRect columnFooterFrame = [columnFooterView frame];
 	columnFooterFrame.size.width = contentRect.size.width;
 	if (![[contentScrollView verticalScroller] isHidden]) {
@@ -1345,6 +1385,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 																  scrollerStyle:NSScrollerStyleOverlay];
 	}
 	[columnFooterView setFrameSize:columnHeaderFrame.size];
+	
 	
 	contentView.groupRowIndexes = nil;
     
@@ -1601,20 +1642,24 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		NSColor *sideColor = [NSColor colorWithDeviceWhite:1.0 alpha:0.4];
 		NSColor *borderColor = [NSColor colorWithDeviceWhite:0.8 alpha:1.000];
 		
-		// Draw the top bevel line
-		NSRect topLine = NSMakeRect(NSMinX(aRect), NSMinY(aRect), NSWidth(aRect), 1.0);
-		[topColor set];
-		NSRectFill(topLine);
+		// we only want to draw the bottom border if the footer is hidden
 		
-		// Draw the left bevel line
-		NSRect leftLine = NSMakeRect(NSMinX(aRect), NSMinY(aRect), 1.0, NSHeight(aRect));
-		[sideColor set];
-		[[NSBezierPath bezierPathWithRect:leftLine] fill];
-		
-		// Draw the right border
-		[borderColor set];
-		NSRect borderLine = NSMakeRect(NSMaxX(aRect) - 1, NSMinY(aRect), 1.0, NSHeight(aRect));
-		NSRectFill(borderLine);
+		if (!_footerHidden) {
+			// Draw the top bevel line
+			NSRect topLine = NSMakeRect(NSMinX(aRect), NSMinY(aRect), NSWidth(aRect), 1.0);
+			[topColor set];
+			NSRectFill(topLine);
+			
+			// Draw the left bevel line
+			NSRect leftLine = NSMakeRect(NSMinX(aRect), NSMinY(aRect), 1.0, NSHeight(aRect));
+			[sideColor set];
+			[[NSBezierPath bezierPathWithRect:leftLine] fill];
+			
+			// Draw the right border
+			[borderColor set];
+			NSRect borderLine = NSMakeRect(NSMaxX(aRect) - 1, NSMinY(aRect), 1.0, NSHeight(aRect));
+			NSRectFill(borderLine);
+		}
 		
 		// Draw the bottom border
 		NSRect bottomLine = NSMakeRect(NSMinX(aRect), NSMaxY(aRect) - 1.0, NSWidth(aRect), 1.0);
