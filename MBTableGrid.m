@@ -1839,7 +1839,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
     id value = [self _objectValueForColumn:column row:row];
     
     [self.selectedRowIndexes enumerateIndexesUsingBlock:^(NSUInteger idx, BOOL *stop) {
-        [self _setObjectValue:[value copy] forColumn:column row:idx undoTitle:@"Fill"];
+        [self _setObjectValue:[value copy] forColumn:column row:idx undoTitle:NSLocalizedString(@"Fill", nil)];
     }];
     
     // If rows were added, tell the delegate
