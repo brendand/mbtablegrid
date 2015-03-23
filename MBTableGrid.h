@@ -43,6 +43,8 @@
  *				response to this notification should be especially efficient.
  */
 APPKIT_EXTERN NSString *MBTableGridDidChangeSelectionNotification;
+APPKIT_EXTERN NSString *MBTableGridDidChangeColumnSelectionNotification;
+APPKIT_EXTERN NSString *MBTableGridDidChangeRowSelectionNotification;
 
 /**
  * @brief		Posted after one or more columns are moved by user action
@@ -191,6 +193,18 @@ typedef enum {
  *
  */
 - (void)selectRow:(NSUInteger)rowIndex;
+
+/**
+ * @brief		Moves the selection down one row
+ *
+ */
+- (void)moveDown:(id)sender;
+
+/**
+ * @brief		Moves the selection up one row
+ *
+ */
+- (void)moveUp:(id)sender;
 
 /**
  * @}
@@ -1170,7 +1184,22 @@ typedef enum {
  *
  * @details		\c aNotification is an \c MBTableGridDidChangeSelectionNotification.
  */
-- (void)tableGridDidChangeSelection:(NSNotification *)aNotification;
+- (void)tableGridDidChangeSelection:(NSNotification *)aNotification DEPRECATED_ATTRIBUTE DEPRECATED_MSG_ATTRIBUTE("Use tableGridDidChangeColumnSelection: or tableGridDidChangeRowSelection methods instead.");
+
+/**
+ * @brief		Informs the delegate that the table grid's column selection has changed.
+ *
+ * @details		\c aNotification is an \c MBTableGridDidChangeSelectionNotification.
+ */
+- (void)tableGridDidChangeColumnSelection:(NSNotification *)aNotification;
+
+/**
+ * @brief		Informs the delegate that the table grid's row selection has changed.
+ *
+ * @details		\c aNotification is an \c MBTableGridDidChangeSelectionNotification.
+ */
+- (void)tableGridDidChangeRowSelection:(NSNotification *)aNotification;
+
 
 /**
  * @brief		Tells the delegate that the specified column header was double-clicked

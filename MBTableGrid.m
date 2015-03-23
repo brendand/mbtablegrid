@@ -36,6 +36,8 @@
 #pragma mark -
 #pragma mark Constant Definitions
 NSString *MBTableGridDidChangeSelectionNotification     = @"MBTableGridDidChangeSelectionNotification";
+NSString *MBTableGridDidChangeColumnSelectionNotification     = @"MBTableGridDidChangeColumnSelectionNotification";
+NSString *MBTableGridDidChangeRowSelectionNotification     = @"MBTableGridDidChangeRowSelectionNotification";
 NSString *MBTableGridDidMoveColumnsNotification         = @"MBTableGridDidMoveColumnsNotification";
 NSString *MBTableGridDidMoveRowsNotification            = @"MBTableGridDidMoveRowsNotification";
 NSString *MBTableGridDidResizeColumnNotification		= @"MBTableGridDidResizeColumnNotification";
@@ -1318,7 +1320,13 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		} else if ([_selectedRowIndexes firstIndex] >= _numberOfRows || [_selectedRowIndexes lastIndex] >= _numberOfRows) {
 			// Select an existing row close to the first previously selected row
 			NSUInteger rowToSelect = MIN([_selectedRowIndexes firstIndex], _numberOfRows - 1);
+			if ([self _isGroupRow:rowToSelect]) {
+				rowToSelect++;
+			}
 			validatedRowIndexes = [NSIndexSet indexSetWithIndex:rowToSelect];
+		} else if ([self _isGroupRow:[_selectedRowIndexes firstIndex]]) {
+			NSRange selectedRange = NSMakeRange([_selectedRowIndexes firstIndex] +1, [_selectedRowIndexes lastIndex] + 1);
+			validatedRowIndexes = [NSIndexSet indexSetWithIndexesInRange:selectedRange];
 		}
 		
 		[self setSelectedRowIndexes:validatedRowIndexes];
@@ -1363,7 +1371,9 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 	// Update the column header view's size
 	NSRect columnHeaderFrame = [columnHeaderView frame];
-	columnHeaderFrame.size.width = contentRect.size.width;
+	if (_numberOfRows > 0) {
+		columnHeaderFrame.size.width = contentRect.size.width;
+	}
 	if (![[contentScrollView verticalScroller] isHidden]) {
 		columnHeaderFrame.size.width += [NSScroller scrollerWidthForControlSize:NSRegularControlSize
 																  scrollerStyle:NSScrollerStyleOverlay];
@@ -1513,12 +1523,12 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 	// Post the notification
 	[[NSNotificationCenter defaultCenter] postNotificationName:MBTableGridDidChangeSelectionNotification object:self];
+	[[NSNotificationCenter defaultCenter] postNotificationName:MBTableGridDidChangeColumnSelectionNotification object:self];
 }
 
 - (void)setSelectedRowIndexes:(NSIndexSet *)anIndexSet {
 	if (anIndexSet == _selectedColumnIndexes)
 		return;
-
 
 	// Allow the delegate to validate the selection
 	if ([[self delegate] respondsToSelector:@selector(tableGrid:willSelectRowsAtIndexPath:)]) {
@@ -1531,6 +1541,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 	// Post the notification
 	[[NSNotificationCenter defaultCenter] postNotificationName:MBTableGridDidChangeSelectionNotification object:self];
+	[[NSNotificationCenter defaultCenter] postNotificationName:MBTableGridDidChangeRowSelectionNotification object:self];
 }
 
 - (void)setDelegate:(id <MBTableGridDelegate> )anObject {
@@ -1540,6 +1551,8 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	if (_delegate) {
 		// Unregister the delegate for relavent notifications
 		[[NSNotificationCenter defaultCenter] removeObserver:_delegate name:MBTableGridDidChangeSelectionNotification object:self];
+		[[NSNotificationCenter defaultCenter] removeObserver:_delegate name:MBTableGridDidChangeColumnSelectionNotification object:self];
+		[[NSNotificationCenter defaultCenter] removeObserver:_delegate name:MBTableGridDidChangeRowSelectionNotification object:self];
 		[[NSNotificationCenter defaultCenter] removeObserver:_delegate name:MBTableGridDidMoveColumnsNotification object:self];
 		[[NSNotificationCenter defaultCenter] removeObserver:_delegate name:MBTableGridDidMoveRowsNotification object:self];
 		[[NSNotificationCenter defaultCenter] removeObserver:_delegate name:MBTableGridDidResizeColumnNotification object:self];
@@ -1550,6 +1563,12 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	// Register the new delegate for relavent notifications
 	if ([_delegate respondsToSelector:@selector(tableGridDidChangeSelection:)]) {
 		[[NSNotificationCenter defaultCenter] addObserver:_delegate selector:@selector(tableGridDidChangeSelection:) name:MBTableGridDidChangeSelectionNotification object:self];
+	}
+	if ([_delegate respondsToSelector:@selector(tableGridDidChangeColumnSelection:)]) {
+		[[NSNotificationCenter defaultCenter] addObserver:_delegate selector:@selector(tableGridDidChangeColumnSelection:) name:MBTableGridDidChangeColumnSelectionNotification object:self];
+	}
+	if ([_delegate respondsToSelector:@selector(tableGridDidChangeRowSelection:)]) {
+		[[NSNotificationCenter defaultCenter] addObserver:_delegate selector:@selector(tableGridDidChangeRowSelection:) name:MBTableGridDidChangeRowSelectionNotification object:self];
 	}
 	if ([_delegate respondsToSelector:@selector(tableGridDidMoveColumns:)]) {
 		[[NSNotificationCenter defaultCenter] addObserver:_delegate selector:@selector(tableGridDidMoveColumns:) name:MBTableGridDidMoveColumnsNotification object:self];
