@@ -413,6 +413,13 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 		
 		[[self tableGrid].columnRects removeAllObjects];
 		
+		if ([[[self tableGrid] delegate] respondsToSelector:@selector(tableGridDidResizeColumn:)]) {
+		
+			// Post the notification
+			[[NSNotificationCenter defaultCenter] postNotificationName:MBTableGridDidResizeColumnNotification object:[self tableGrid] userInfo:nil];
+
+		}
+		
     } else {
         
         // If we only clicked on a header that was part of a bigger selection, select it

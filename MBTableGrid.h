@@ -67,6 +67,7 @@ APPKIT_EXTERN NSString *MBTableGridDidMoveColumnsNotification;
  *					new indices.
  */
 APPKIT_EXTERN NSString *MBTableGridDidMoveRowsNotification;
+APPKIT_EXTERN NSString *MBTableGridDidResizeColumnNotification;
 
 APPKIT_EXTERN NSString *MBTableGridColumnDataType;
 APPKIT_EXTERN NSString *MBTableGridRowDataType;
@@ -1216,6 +1217,14 @@ typedef enum {
  * @see			tableGridDidMoveColumns:
  */
 - (void)tableGridDidMoveRows:(NSNotification *)aNotification;
+
+/**
+ * @brief		Called when the user lets go of the mouse after resizing a column.
+ *
+ * @details		\c aNotification is an \c MBTableGridDidResizeColumnNotification.
+ *
+ */
+- (void)tableGridDidResizeColumn:(NSNotification *)aNotification;
 
 /**
  * @}

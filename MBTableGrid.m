@@ -38,6 +38,7 @@
 NSString *MBTableGridDidChangeSelectionNotification     = @"MBTableGridDidChangeSelectionNotification";
 NSString *MBTableGridDidMoveColumnsNotification         = @"MBTableGridDidMoveColumnsNotification";
 NSString *MBTableGridDidMoveRowsNotification            = @"MBTableGridDidMoveRowsNotification";
+NSString *MBTableGridDidResizeColumnNotification		= @"MBTableGridDidResizeColumnNotification";
 CGFloat MBTableHeaderMinimumColumnWidth = 60.0f;
 
 #pragma mark -
@@ -1541,6 +1542,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		[[NSNotificationCenter defaultCenter] removeObserver:_delegate name:MBTableGridDidChangeSelectionNotification object:self];
 		[[NSNotificationCenter defaultCenter] removeObserver:_delegate name:MBTableGridDidMoveColumnsNotification object:self];
 		[[NSNotificationCenter defaultCenter] removeObserver:_delegate name:MBTableGridDidMoveRowsNotification object:self];
+		[[NSNotificationCenter defaultCenter] removeObserver:_delegate name:MBTableGridDidResizeColumnNotification object:self];
 	}
 
 	_delegate = anObject;
@@ -1555,6 +1557,10 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	if ([_delegate respondsToSelector:@selector(tableGridDidMoveRows:)]) {
 		[[NSNotificationCenter defaultCenter] addObserver:_delegate selector:@selector(tableGridDidMoveRows:) name:MBTableGridDidMoveRowsNotification object:self];
 	}
+	if ([_delegate respondsToSelector:@selector(tableGridDidResizeColumn:)]) {
+		[[NSNotificationCenter defaultCenter] addObserver:_delegate selector:@selector(tableGridDidResizeColumn:) name:MBTableGridDidResizeColumnNotification object:self];
+	}
+
 }
 
 @end
