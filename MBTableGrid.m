@@ -42,6 +42,7 @@ NSString *MBTableGridDidMoveColumnsNotification         = @"MBTableGridDidMoveCo
 NSString *MBTableGridDidMoveRowsNotification            = @"MBTableGridDidMoveRowsNotification";
 NSString *MBTableGridDidResizeColumnNotification		= @"MBTableGridDidResizeColumnNotification";
 CGFloat MBTableHeaderMinimumColumnWidth = 60.0f;
+CGFloat MBTableGridContentViewPadding = 10.0f;
 
 #pragma mark -
 #pragma mark Drag Types
@@ -203,6 +204,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		self.columnRects = [NSMutableDictionary dictionary];
 		
 		self.footerHidden = YES;
+		
 	}
 	return self;
 }
@@ -322,6 +324,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	// Draw the row header background
 	NSRect rowHeaderRect = NSMakeRect(0, NSMaxY(cornerRect), MBTableGridRowHeaderWidth, [self frame].size.height - MBTableGridColumnHeaderHeight + footerHeight);
 	[self _drawRowHeaderBackgroundInRect:rowHeaderRect];
+	
 }
 
 - (void)setNeedsDisplay:(BOOL)needsDisplay {
@@ -1363,7 +1366,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		NSUInteger lastRow = _numberOfRows-1; // _numberOfRows must be > 0
 		NSRect bottomRightCellFrame = [contentView frameOfCellAtColumn:lastColumn row:lastRow];
 		
-		contentRect = NSMakeRect([contentView frame].origin.x, [contentView frame].origin.y, NSMaxX(bottomRightCellFrame), NSMaxY(bottomRightCellFrame));
+		contentRect = NSMakeRect([contentView frame].origin.x, [contentView frame].origin.y, NSMaxX(bottomRightCellFrame) + MBTableGridContentViewPadding, NSMaxY(bottomRightCellFrame));
 	}
 	
 	[contentView setFrameSize:contentRect.size];

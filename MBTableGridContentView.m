@@ -203,6 +203,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		NSValue *rowRectValue = _groupRowIndexes[@(row)];
 		if (rowRectValue) {
 			NSRect rowFrame = [self rectOfRow:row];
+			rowFrame.size.width -= MBTableGridContentViewPadding;
 			id objectValue = [[self tableGrid] _objectValueForColumn:0 row:row];
 			_defaultCell.font = _groupRowFont;
 			_defaultCell.textColor = _groupRowTextColor;

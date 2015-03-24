@@ -74,6 +74,11 @@ APPKIT_EXTERN NSString *MBTableGridDidResizeColumnNotification;
 APPKIT_EXTERN NSString *MBTableGridColumnDataType;
 APPKIT_EXTERN NSString *MBTableGridRowDataType;
 
+/**
+ * @brief		Just a little bit of padding to make resizing the last column easier.
+ */
+APPKIT_EXTERN CGFloat MBTableGridContentViewPadding;
+
 typedef enum {
 	MBTableGridLeftEdge		= 0,
 	MBTableGridRightEdge	= 1,
