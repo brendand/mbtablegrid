@@ -97,10 +97,10 @@ NSString * const ColumnText4 = @"text4";
     [self tableGrid:tableGrid addColumns:20 shouldReload:NO];
     [self tableGrid:tableGrid addRows:300 shouldReload:NO];
 	
-	[tableGrid setIndicatorImage:[NSImage imageNamed:@"sort-asc"] reverseImage:[NSImage imageNamed:@"sort-desc"] inColumns:@[@1,@3]];
-	
 	[tableGrid reloadData];
 	
+	[tableGrid setIndicatorImage:[NSImage imageNamed:@"sort-asc"] reverseImage:[NSImage imageNamed:@"sort-desc"] inColumns:@[@1,@3]];
+
 	// Register to receive text strings
 	[tableGrid registerForDraggedTypes:@[NSStringPboardType]];
 	
