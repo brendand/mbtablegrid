@@ -94,8 +94,8 @@ NSString * const ColumnText4 = @"text4";
     formatters = @{ColumnCurrency : decimalFormatter, ColumnDate : dateFormatter};
     
 	// Add 10 columns & rows
-    [self tableGrid:tableGrid addColumns:10 shouldReload:NO];
-    [self tableGrid:tableGrid addRows:10 shouldReload:NO];
+    [self tableGrid:tableGrid addColumns:20 shouldReload:NO];
+    [self tableGrid:tableGrid addRows:300 shouldReload:NO];
 	
 	[tableGrid setIndicatorImage:[NSImage imageNamed:@"sort-asc"] reverseImage:[NSImage imageNamed:@"sort-desc"] inColumns:@[@1,@3]];
 	

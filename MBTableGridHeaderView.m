@@ -317,8 +317,8 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 {	
 	// Get the location of the mouse
 	NSPoint loc = [self convertPoint:[theEvent locationInWindow] fromView:nil];
-	CGFloat deltaX = abs(loc.x - mouseDownLocation.x);
-	CGFloat deltaY = abs(loc.y - mouseDownLocation.y);
+	CGFloat deltaX = fabs(loc.x - mouseDownLocation.x);
+	CGFloat deltaY = fabs(loc.y - mouseDownLocation.y);
 	    
     if (canResize) {
         

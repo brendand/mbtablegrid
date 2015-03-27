@@ -60,7 +60,9 @@
 		[self.accessoryButtonImage drawInRect:accessoryButtonFrame
 									 fromRect:NSZeroRect
 									operation:NSCompositeSourceOver
-									 fraction:1.0];
+									 fraction:1.0
+							   respectFlipped:YES
+										hints:nil];
 		
 	}
 	

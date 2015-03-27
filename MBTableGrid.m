@@ -327,7 +327,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 	// Draw the column footer background
 	
-	NSRect columnFooterRect = NSMakeRect(NSWidth(cornerRect), NSMaxY(self.frame) - MBTableGridColumnHeaderHeight, NSWidth(self.frame) - NSWidth(cornerRect), MBTableGridColumnHeaderHeight);
+	NSRect columnFooterRect = NSMakeRect(NSWidth(cornerRect), NSMaxY(self.frame) - MBTableGridColumnHeaderHeight * 2 - 2, NSWidth(self.frame) - NSWidth(cornerRect), MBTableGridColumnHeaderHeight);
 	[self _drawColumnFooterBackgroundInRect:columnFooterRect];
 
 }
@@ -884,6 +884,9 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 - (void)scrollToRow:(NSUInteger)rowIndex animate:(BOOL)shouldAnimate {
 	NSRect rowRect = [self rectOfRow:rowIndex];
+	
+	rowRect = [self convertRect:rowRect toView:contentScrollView.contentView];
+	rowRect.origin.x = self.contentView.visibleRect.origin.x;
 	[self scrollToArea:rowRect animate:shouldAnimate];
 }
 
@@ -941,8 +944,12 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 - (void)insertText:(id)aString {
 	NSUInteger column = [self.selectedColumnIndexes firstIndex];
 	NSCell *selectedCell = [self _cellForColumn:column];
+	NSUInteger row = [self.selectedRowIndexes firstIndex];
+
+	BOOL isImageCell = [selectedCell isKindOfClass:[MBImageCell class]];
+	BOOL canEdit = [self _canEditCellAtColumn:column row:row];
 	
-	if (![selectedCell isKindOfClass:[MBImageCell class]]) {
+	if (!isImageCell && canEdit) {
 		[contentView editSelectedCell:self text:aString];
 		
 		if ([selectedCell isKindOfClass:[MBTableGridCell class]]) {
@@ -956,7 +963,6 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		}
 		
 	} else {
-		NSUInteger row = [self.selectedRowIndexes firstIndex];
 		[self _accessoryButtonClicked:column row:row];
 	}
 	[self setNeedsDisplay:YES];

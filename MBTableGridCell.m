@@ -79,7 +79,10 @@
 		[self.accessoryButtonImage drawInRect:accessoryButtonFrame
 									 fromRect:NSZeroRect
 									operation:NSCompositeSourceOver
-									 fraction:1.0];
+									 fraction:1.0
+							   respectFlipped:YES
+										hints:nil];
+		
 		
 		// adjust cellFrame to make room for accessory button so it's never overlapped
 		// with a little bit of padding.

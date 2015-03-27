@@ -798,7 +798,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 
 - (void)showCompletionsForTextView:(NSTextView *)textView;
 {
-    if (!isCompleting) {
+    if (!isCompleting && editedRow != NSNotFound) {
         isCompleting = YES;
         [textView complete:nil];
         isCompleting = NO;
