@@ -184,7 +184,7 @@ NSString * const ColumnText4 = @"text4";
 }
 
 - (NSString *)tableGrid:(MBTableGrid *)aTableGrid headerStringForColumn:(NSUInteger)columnIndex {
-	return [NSString stringWithFormat:@"Column %lu", columnIndex];
+	return [NSString stringWithFormat:@"Header Column %lu", columnIndex];
 }
 
 - (id)tableGrid:(MBTableGrid *)aTableGrid objectValueForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex

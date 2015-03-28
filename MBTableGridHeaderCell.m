@@ -80,23 +80,23 @@
 	}
 	
 	if (self.sortIndicatorImage) {
-		NSRect accessoryButtonFrame = cellFrame;
-		accessoryButtonFrame.size = self.sortIndicatorImage.size;
-		if (accessoryButtonFrame.size.height > cellFrame.size.height) {
-			accessoryButtonFrame.size.height = cellFrame.size.height;
+		NSRect sortIndicatorFrame = cellFrame;
+		sortIndicatorFrame.size = self.sortIndicatorImage.size;
+		if (sortIndicatorFrame.size.height > cellFrame.size.height) {
+			sortIndicatorFrame.size.height = cellFrame.size.height;
 		}
-		if (accessoryButtonFrame.size.width > kMAX_INDICATOR_WIDTH) {
-			accessoryButtonFrame.size.width = kMAX_INDICATOR_WIDTH;
+		if (sortIndicatorFrame.size.width > kMAX_INDICATOR_WIDTH) {
+			sortIndicatorFrame.size.width = kMAX_INDICATOR_WIDTH;
 		}
-		accessoryButtonFrame.origin.x = cellFrame.origin.x + cellFrame.size.width - accessoryButtonFrame.size.width - 4;
-		accessoryButtonFrame.origin.y = accessoryButtonFrame.size.height / 2;
+		sortIndicatorFrame.origin.x = cellFrame.origin.x + cellFrame.size.width - sortIndicatorFrame.size.width - 4;
+		sortIndicatorFrame.origin.y = sortIndicatorFrame.size.height / 2;
 		
 		// adjust rect for top border
-		accessoryButtonFrame.origin.y += 1;
+		sortIndicatorFrame.origin.y += 1;
 		
 		// draw the accessory image
 		
-		[self.sortIndicatorImage drawInRect:accessoryButtonFrame
+		[self.sortIndicatorImage drawInRect:sortIndicatorFrame
 								   fromRect:NSZeroRect
 								  operation:NSCompositeSourceOver
 								   fraction:1.0
@@ -107,7 +107,7 @@
 		// adjust cellFrame to make room for accessory button so it's never overlapped
 		// with a little bit of padding.
 		
-		cellFrame.size.width -= accessoryButtonFrame.size.width + 2;
+		cellFrameRect.size.width -= kMAX_INDICATOR_WIDTH;
 	}
 
 	
