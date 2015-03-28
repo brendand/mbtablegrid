@@ -265,11 +265,11 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
  *
  * @return		The header value for the row.
  */
-- (void)setSortAscendingImage:(NSImage *)ascendingImage sortDescendingImage:(NSImage*)descendingImage sortNoneImage:(NSImage *)noneImage {
+- (void)setSortAscendingImage:(NSImage *)ascendingImage sortDescendingImage:(NSImage*)descendingImage sortUndeterminedImage:(NSImage *)undeterminedImage {
 	MBTableGridHeaderView *headerView = [self columnHeaderView];
 	headerView.sortAscendingImage = ascendingImage;
 	headerView.sortDescendingImage = descendingImage;
-	headerView.sortNoneImage = noneImage;
+	headerView.sortUndeterminedImage = undeterminedImage;
 }
 
 /**

@@ -96,7 +96,7 @@
 /**
  * @brief		The no sort indicator image for the header cell
  */
-@property (nonatomic, strong) NSImage *sortNoneImage;
+@property (nonatomic, strong) NSImage *sortUndeterminedImage;
 
 /**
  * @brief		The autosave name for this grid

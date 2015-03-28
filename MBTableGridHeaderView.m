@@ -113,8 +113,11 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 					case MBSortDescending:
 						[headerCell setSortIndicatorImage:self.sortDescendingImage];
 						break;
+					case MBSortUndetermined:
+						[headerCell setSortIndicatorImage:self.sortUndeterminedImage];
+						break;
 					default:
-						[headerCell setSortIndicatorImage:self.sortNoneImage];
+						[headerCell setSortIndicatorImage:nil];
 						break;
 				}
 				

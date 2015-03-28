@@ -99,7 +99,7 @@ NSString * const ColumnText4 = @"text4";
 	
 	[tableGrid reloadData];
 	
-	[tableGrid setSortAscendingImage:[NSImage imageNamed:@"sort-asc"] sortDescendingImage:[NSImage imageNamed:@"sort-desc"] sortNoneImage:nil];
+	[tableGrid setSortAscendingImage:[NSImage imageNamed:@"sort-asc"] sortDescendingImage:[NSImage imageNamed:@"sort-desc"] sortUndeterminedImage:[NSImage imageNamed:@"sort-none"]];
 
 	// Register to receive text strings
 	[tableGrid registerForDraggedTypes:@[NSStringPboardType]];
@@ -377,7 +377,7 @@ NSString * const ColumnText4 = @"text4";
 	} else if (columnIndex == 3) {
 		return MBSortDescending;
 	} else {
-		return MBSortNone;
+		return MBSortUndetermined;
 	}
 }
 

@@ -29,7 +29,8 @@
 typedef enum : NSUInteger {
 	MBSortNone,
 	MBSortAscending,
-	MBSortDescending
+	MBSortDescending,
+	MBSortUndetermined
 } MBSortDirection;
 
 @class MBTableGridHeaderView, MBTableGridFooterView, MBTableGridHeaderCell, MBTableGridContentView;
@@ -337,7 +338,7 @@ typedef enum {
  *
  * @return		The header value for the row.
  */
-- (void)setSortAscendingImage:(NSImage *)ascendingImage sortDescendingImage:(NSImage*)descendingImage sortNoneImage:(NSImage *)noneImage;
+- (void)setSortAscendingImage:(NSImage *)ascendingImage sortDescendingImage:(NSImage*)descendingImage sortUndeterminedImage:(NSImage *)undeterminedImage;
 
 /**
  * @brief		Returns the sort indicator image
