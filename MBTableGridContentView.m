@@ -530,7 +530,9 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		} else {
 			// No modifier keys, so change the selection
 			[self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndex:mouseDownColumn];
-			[self tableGrid].selectedRowIndexes = [NSIndexSet indexSetWithIndex:mouseDownRow];
+			if (![[self tableGrid].selectedRowIndexes containsIndex:mouseDownRow]) {
+				[self tableGrid].selectedRowIndexes = [NSIndexSet indexSetWithIndex:mouseDownRow];
+			}
 			[[self tableGrid] _setStickyColumn:MBTableGridLeftEdge row:MBTableGridTopEdge];
 		}
     // Edit cells on double click if they don't already edit on first click

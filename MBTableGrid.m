@@ -737,7 +737,9 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 	// If the Shift key was not held, move the selection
 	self.selectedColumnIndexes = [NSIndexSet indexSetWithIndex:(column - 1)];
-	self.selectedRowIndexes = [NSIndexSet indexSetWithIndex:row];
+	if (![self.selectedRowIndexes containsIndex:row]) {
+		self.selectedRowIndexes = [NSIndexSet indexSetWithIndex:row];
+	}
 }
 
 - (void)moveLeftAndModifySelection:(id)sender {
@@ -813,7 +815,9 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 	// If the Shift key was not held, move the selection
 	self.selectedColumnIndexes = [NSIndexSet indexSetWithIndex:(column + 1)];
-	self.selectedRowIndexes = [NSIndexSet indexSetWithIndex:row];
+	if (![self.selectedRowIndexes containsIndex:row]) {
+		self.selectedRowIndexes = [NSIndexSet indexSetWithIndex:row];
+	}
 
 	if (column + 1 < [self numberOfColumns]) {
 		NSRect cellRect = [self frameOfCellAtColumn:column + 1 row:row];
