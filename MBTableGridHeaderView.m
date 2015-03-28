@@ -39,8 +39,9 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 - (MBTableGridContentView *)_contentView;
 - (void)_dragColumnsWithEvent:(NSEvent *)theEvent;
 - (void)_dragRowsWithEvent:(NSEvent *)theEvent;
-- (void)sortButtonClicked:(id)sender;
-- (BOOL)_isGroupRow:(NSUInteger)row;
+- (void)sortButtonClickedOnColumn:(NSUInteger)columnIndex;
+- (BOOL)_isGroupRow:(NSUInteger)rowIndex;
+- (MBSortDirection)_sortDirectionForColumn:(NSUInteger)columnIndex;
 @end
 
 @implementation MBTableGridHeaderView
@@ -66,87 +67,6 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
         isResizing = NO;
 	}
 	return self;
-}
-
-- (void)placeSortButtons
-{
-	NSMutableArray *capturingButtons = [NSMutableArray arrayWithCapacity:0];
-	
-	NSButton *sortButton;
-	
-	MBTableGrid *tableGrid = [self tableGrid];
-	NSUInteger numberOfColumns = tableGrid.numberOfColumns;
-	
-	if (numberOfColumns > 0) {
-		for (NSNumber *cellNumber in self.indicatorImageColumns)
-		{
-			sortButton = [[NSButton alloc] init];
-			[sortButton setImage:self.indicatorImage];
-			[sortButton setAlternateImage:self.indicatorReverseImage];
-			[sortButton setBordered:NO];
-			[sortButton setState:NSOnState];
-			sortButton.tag = [cellNumber integerValue];
-			[sortButton setTarget:tableGrid];
-			[sortButton setAction:@selector(sortButtonClicked:)];
-			
-			[self addSubview:sortButton];
-			
-			[sortButton setNextState];
-			
-			[capturingButtons addObject:sortButton];
-		}
-	}
-
-	tableGrid.sortButtons = [[NSArray alloc] initWithArray:capturingButtons];
-}
-
-- (void)toggleSortButtonIcon:(NSButton*)btn
-{
-	if ([[btn image] isEqualTo:self.indicatorImage])
-	{
-		[btn setImage:self.indicatorReverseImage];
-	}
-	else
-	{
-		[btn setImage:self.indicatorImage];
-	}
-}
-
-- (void)layoutSortButtonWithRect:(NSRect)rect forColumn:(NSInteger)column
-{
-	// Set the frames of the sort buttons here
-	NSRect indicatorRect = NSZeroRect;
-	NSSize sortImageSize = [self.indicatorImage size];
-	indicatorRect.size = sortImageSize;
-	indicatorRect.origin.x = NSMaxX(rect) - (sortImageSize.width + kSortIndicatorXInset);
-	indicatorRect.origin.y = NSMinY(rect) + roundf((NSHeight(rect) - sortImageSize.height) / 2.0);
-
-	MBTableGrid *tableGrid = [self tableGrid];
-	
-	for (NSButton *button in tableGrid.sortButtons)
-	{
-		if (button.tag == column)
-		{
-			[button setFrame:indicatorRect];
-		}
-	}
-}
-
-- (void)viewWillDraw {
-	[super viewWillDraw];
-	
-	NSUInteger numberOfColumns = [self tableGrid].numberOfColumns;
-	if (numberOfColumns > 0) {
-		for (NSNumber *columnNumber in self.indicatorImageColumns)
-		{
-			NSInteger column = [columnNumber integerValue];
-			
-			NSRect headerRect = [self headerRectOfColumn:column];
-			
-			
-			[self layoutSortButtonWithRect:headerRect forColumn:column];
-		}
-	}
 }
 
 - (void)drawRect:(NSRect)rect
@@ -185,10 +105,17 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 					[headerCell setState:NSOffState];
 				}
 				
-				if ([self.indicatorImageColumns containsObject:[NSNumber numberWithInteger:column]]) {
-					[headerCell setSortIndicatorImage:self.indicatorImage];
-				} else {
-					[headerCell setSortIndicatorImage:nil];
+				MBSortDirection sortDirection = [[self tableGrid] _sortDirectionForColumn:column];
+				switch (sortDirection) {
+					case MBSortAscending:
+						[headerCell setSortIndicatorImage:self.sortAscendingImage];
+						break;
+					case MBSortDescending:
+						[headerCell setSortIndicatorImage:self.sortDescendingImage];
+						break;
+					default:
+						[headerCell setSortIndicatorImage:self.sortNoneImage];
+						break;
 				}
 				
 				NSString *stringValue = [[self tableGrid] _headerStringForColumn:column];
@@ -281,7 +208,15 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
                 // No modifier keys, so change the selection
                 if(self.orientation == MBTableHeaderHorizontalOrientation) {
                     mouseDownItem = column;
-                    
+					
+					if ([[self tableGrid] _sortDirectionForColumn:column]) {
+						NSRect cellFrame = [self headerRectOfColumn:column];
+						NSCellHitResult hitResult = [self.headerCell hitTestForEvent:theEvent inRect:cellFrame ofView:self];
+						if (hitResult != NSCellHitNone) {
+							[[self tableGrid] sortButtonClickedOnColumn:column];
+						}
+					}
+					
                     if([[self tableGrid].selectedColumnIndexes containsIndex:column] && [[self tableGrid].selectedRowIndexes count] == [self tableGrid].numberOfRows) {
                         // Allow the user to drag the column
                         shouldDragItems = YES;

@@ -99,7 +99,7 @@ NSString * const ColumnText4 = @"text4";
 	
 	[tableGrid reloadData];
 	
-	[tableGrid setIndicatorImage:[NSImage imageNamed:@"sort-asc"] reverseImage:[NSImage imageNamed:@"sort-desc"] inColumns:@[@1,@3]];
+	[tableGrid setSortAscendingImage:[NSImage imageNamed:@"sort-asc"] sortDescendingImage:[NSImage imageNamed:@"sort-desc"] sortNoneImage:nil];
 
 	// Register to receive text strings
 	[tableGrid registerForDraggedTypes:@[NSStringPboardType]];
@@ -369,6 +369,16 @@ NSString * const ColumnText4 = @"text4";
 		return YES;
 	}
 	return NO;
+}
+
+- (MBSortDirection)tableGrid:(MBTableGrid *)aTableGrid sortDirectionForColumn:(NSUInteger)columnIndex {
+	if (columnIndex == 1) {
+		return MBSortAscending;
+	} else if (columnIndex == 3) {
+		return MBSortDescending;
+	} else {
+		return MBSortNone;
+	}
 }
 
 #pragma mark Footer
@@ -765,6 +775,10 @@ NSString * const ColumnText4 = @"text4";
 - (NSUndoManager *)undoManagerForTableGrid:(MBTableGrid *)aTableGrid;
 {
     return aTableGrid.window.undoManager;
+}
+
+- (void)tableGrid:(MBTableGrid *)aTableGrid didSortColumn:(NSUInteger)columnIndex {
+	NSLog(@"did sort column: %lu", (unsigned long)columnIndex);
 }
 
 #pragma mark - QuickLook

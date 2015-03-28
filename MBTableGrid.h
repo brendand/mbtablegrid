@@ -26,6 +26,12 @@
 #import <Cocoa/Cocoa.h>
 #import <QuartzCore/QuartzCore.h>
 
+typedef enum : NSUInteger {
+	MBSortNone,
+	MBSortAscending,
+	MBSortDescending
+} MBSortDirection;
+
 @class MBTableGridHeaderView, MBTableGridFooterView, MBTableGridHeaderCell, MBTableGridContentView;
 @protocol MBTableGridDelegate, MBTableGridDataSource;
 
@@ -339,7 +345,7 @@ typedef enum {
  *
  * @return		The header value for the row.
  */
-- (void)setIndicatorImage:(NSImage *)anImage reverseImage:(NSImage*)reverseImg inColumns:(NSArray*)columns;
+- (void)setSortAscendingImage:(NSImage *)ascendingImage sortDescendingImage:(NSImage*)descendingImage sortNoneImage:(NSImage *)noneImage;
 
 /**
  * @brief		Returns the sort indicator image
@@ -818,6 +824,16 @@ typedef enum {
 - (float)tableGrid:(MBTableGrid *)aTableGrid setWidthForColumn:(NSUInteger)columnIndex;
 
 /**
+ *  @brief      Asks the delegate if the specified row is a group row. A group row has only one cell
+ *              that spans across the entire row.
+ *
+ *  @param      aTableGrid       The table grid that contains the cell.
+ *  @param      columnIndexes    Column indexes of the cells being copied.
+ *  @param      rowIndexes       Row indexes of the cells being copied.
+ */
+- (BOOL)tableGrid:(MBTableGrid *)aTableGrid isGroupRow:(NSUInteger)rowIndex;
+
+/**
  * @}
  */
 
@@ -857,6 +873,20 @@ typedef enum {
  * @see			tableGrid:headerStringForColumn:
  */
 - (NSString *)tableGrid:(MBTableGrid *)aTableGrid headerStringForRow:(NSUInteger)rowIndex;
+
+/**
+ * @brief		Returns the value which should be displayed in the header
+ *				for the specified row.
+ *
+ * @param		aTableGrid		The table grid that sent the message.
+ * @param		rowIndex		The index of the row.
+ *
+ * @return		The header value for the row.
+ *
+ * @see			tableGrid:headerStringForColumn:
+ */
+- (MBSortDirection)tableGrid:(MBTableGrid *)aTableGrid sortDirectionForColumn:(NSUInteger)columnIndex;
+
 
 /**
  * @}
@@ -1219,6 +1249,16 @@ typedef enum {
 - (void)tableGrid:(MBTableGrid *)aTableGrid didDoubleClickColumn:(NSUInteger)columnIndex;
 
 /**
+ * @brief		Called when the sort indicator button is clicked
+ *				in the column header.
+ *
+ * @param		aTableGrid		The table grid that sent the message.
+ * @param		columnIndex		The index of the column.
+ *
+ */
+- (void)tableGrid:(MBTableGrid *)aTableGrid didSortColumn:(NSUInteger)columnIndex;
+
+/**
  * @}
  */
 
@@ -1296,16 +1336,6 @@ typedef enum {
  *  @param      rowIndexes       Row indexes of the cells being copied.
  */
 - (BOOL)tableGrid:(MBTableGrid *)aTableGrid shouldFillColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
-
-/**
- *  @brief      Asks the delegate if the specified row is a group row. A group row has only one cell
- *              that spans across the entire row.
- *
- *  @param      aTableGrid       The table grid that contains the cell.
- *  @param      columnIndexes    Column indexes of the cells being copied.
- *  @param      rowIndexes       Row indexes of the cells being copied.
- */
-- (BOOL)tableGrid:(MBTableGrid *)aTableGrid isGroupRow:(NSUInteger)rowIndex;
 
 /**
  *  @brief      Informs the delegate that an invalid string was entered in a cell

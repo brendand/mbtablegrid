@@ -25,6 +25,8 @@
 
 #import "MBTableGridHeaderCell.h"
 
+#define kMAX_INDICATOR_WIDTH 16
+
 @implementation MBTableGridHeaderCell
 
 @synthesize orientation;
@@ -77,6 +79,38 @@
 		[path fill];
 	}
 	
+	if (self.sortIndicatorImage) {
+		NSRect accessoryButtonFrame = cellFrame;
+		accessoryButtonFrame.size = self.sortIndicatorImage.size;
+		if (accessoryButtonFrame.size.height > cellFrame.size.height) {
+			accessoryButtonFrame.size.height = cellFrame.size.height;
+		}
+		if (accessoryButtonFrame.size.width > kMAX_INDICATOR_WIDTH) {
+			accessoryButtonFrame.size.width = kMAX_INDICATOR_WIDTH;
+		}
+		accessoryButtonFrame.origin.x = cellFrame.origin.x + cellFrame.size.width - accessoryButtonFrame.size.width - 4;
+		accessoryButtonFrame.origin.y = accessoryButtonFrame.size.height / 2;
+		
+		// adjust rect for top border
+		accessoryButtonFrame.origin.y += 1;
+		
+		// draw the accessory image
+		
+		[self.sortIndicatorImage drawInRect:accessoryButtonFrame
+								   fromRect:NSZeroRect
+								  operation:NSCompositeSourceOver
+								   fraction:1.0
+							 respectFlipped:YES
+									  hints:nil];
+		
+		
+		// adjust cellFrame to make room for accessory button so it's never overlapped
+		// with a little bit of padding.
+		
+		cellFrame.size.width -= accessoryButtonFrame.size.width + 2;
+	}
+
+	
 	// Draw the text
 	[self drawInteriorWithFrame:cellFrameRect inView:controlView];
 }
@@ -120,6 +154,20 @@
 	[self.attributedStringValue drawWithRect:textFrame options:NSStringDrawingTruncatesLastVisibleLine | NSStringDrawingUsesLineFragmentOrigin];
 	
 	[[NSGraphicsContext currentContext] restoreGraphicsState];
+}
+
+- (NSCellHitResult)hitTestForEvent:(NSEvent *)event inRect:(NSRect)cellFrame ofView:(NSView *)controlView {
+	
+	NSRect sortButtonFrame = cellFrame;
+	sortButtonFrame.size.width = kMAX_INDICATOR_WIDTH;
+	sortButtonFrame.size.height = kMAX_INDICATOR_WIDTH;
+	sortButtonFrame.origin.x = cellFrame.origin.x + cellFrame.size.width - sortButtonFrame.size.width - 4;
+	
+	// adjust rect for top border
+	sortButtonFrame.origin.y += 1;
+	
+	CGPoint eventLocationInControlView = [controlView convertPoint:event.locationInWindow fromView:nil];
+	return CGRectContainsPoint(sortButtonFrame, eventLocationInControlView) ? NSCellHitContentArea : NSCellHitNone;
 }
 
 @end

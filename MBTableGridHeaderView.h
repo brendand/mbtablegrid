@@ -84,19 +84,19 @@
 @property MBTableGridHeaderOrientation orientation;
 
 /**
- * @brief		The indicator image for the header cell
+ * @brief		The ascending sort indicator image for the header cell
  */
-@property (nonatomic, strong) NSImage *indicatorImage;
+@property (nonatomic, strong) NSImage *sortAscendingImage;
 
 /**
- * @brief		The reverse indicator image for the header cell
+ * @brief		The descending sort indicator image for the header cell
  */
-@property (nonatomic, strong) NSImage *indicatorReverseImage;
+@property (nonatomic, strong) NSImage *sortDescendingImage;
 
 /**
- * @brief		The column to set the indicator image on
+ * @brief		The no sort indicator image for the header cell
  */
-@property (nonatomic, strong) NSArray *indicatorImageColumns;
+@property (nonatomic, strong) NSImage *sortNoneImage;
 
 /**
  * @brief		The autosave name for this grid
@@ -162,21 +162,6 @@
  * @see			headerRectOfColumn:
  */
 - (NSRect)headerRectOfRow:(NSUInteger)rowIndex;
-
-/**
- * @brief
- *
- * @param
- *
- * @return
- *
- *
- *
- * @see
- */
-- (void)placeSortButtons;
-
-- (void)toggleSortButtonIcon:(NSButton*)btn;
 
 /**
  * @}

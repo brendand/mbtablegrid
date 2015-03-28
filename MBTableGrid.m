@@ -84,6 +84,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 - (id)_footerValueForColumn:(NSUInteger)columnIndex;
 - (void)_setFooterValue:(id)value forColumn:(NSUInteger)columnIndex;
 - (BOOL)_isGroupRow:(NSUInteger)rowIndex;
+- (MBSortDirection)_sortDirectionForColumn:(NSUInteger)columnIndex;
 @end
 
 @interface MBTableGrid (DragAndDrop)
@@ -210,9 +211,10 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	return self;
 }
 
-- (void)sortButtonClicked:(id)sender
-{
-	[columnHeaderView toggleSortButtonIcon:(NSButton*)sender];
+- (void)sortButtonClickedOnColumn:(NSUInteger)columnIndex {
+	if ([[self delegate] respondsToSelector:@selector(tableGrid:didSortColumn:)]) {
+		[[self delegate] tableGrid:self didSortColumn:columnIndex];
+	}
 }
 
 - (void)awakeFromNib {
@@ -263,14 +265,11 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
  *
  * @return		The header value for the row.
  */
-- (void)setIndicatorImage:(NSImage *)anImage reverseImage:(NSImage*)reverseImg inColumns:(NSArray*)columns {
+- (void)setSortAscendingImage:(NSImage *)ascendingImage sortDescendingImage:(NSImage*)descendingImage sortNoneImage:(NSImage *)noneImage {
 	MBTableGridHeaderView *headerView = [self columnHeaderView];
-	headerView.indicatorImageColumns = columns;
-	headerView.indicatorImage = anImage;
-	headerView.indicatorReverseImage = reverseImg;
-
-
-	[headerView placeSortButtons];
+	headerView.sortAscendingImage = ascendingImage;
+	headerView.sortDescendingImage = descendingImage;
+	headerView.sortNoneImage = noneImage;
 }
 
 /**
@@ -374,10 +373,8 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
     
     CGFloat minColumnWidth = MBTableHeaderMinimumColumnWidth;
     
-    if (columnHeaderView.indicatorImage && [columnHeaderView.indicatorImageColumns containsObject:[NSNumber numberWithInteger:columnIndex]]) {
-        minColumnWidth += columnHeaderView.indicatorImage.size.width + 2.0f;
-    }
-    
+	minColumnWidth += columnHeaderView.sortAscendingImage.size.width + 2.0f;
+
     if (currentWidth <= minColumnWidth) {
         currentWidth = minColumnWidth;
         offset = columnRect.origin.x - rowHeaderView.bounds.size.width - location.x + minColumnWidth + contentScrollView.contentView.bounds.origin.x;
@@ -1949,12 +1946,22 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 - (BOOL)_isGroupRow:(NSUInteger)rowIndex {
 	// Ask the delegate if the cell is fillable
-	if ([[self delegate] respondsToSelector:@selector(tableGrid:isGroupRow:)]) {
-		return [[self delegate] tableGrid:self isGroupRow:rowIndex];
+	if ([[self dataSource] respondsToSelector:@selector(tableGrid:isGroupRow:)]) {
+		return [[self dataSource] tableGrid:self isGroupRow:rowIndex];
 	}
 	
 	return NO;
 }
+
+- (MBSortDirection)_sortDirectionForColumn:(NSUInteger)columnIndex {
+	// Ask the delegate if the cell is fillable
+	if ([[self dataSource] respondsToSelector:@selector(tableGrid:sortDirectionForColumn:)]) {
+		return [[self dataSource] tableGrid:self sortDirectionForColumn:columnIndex];
+	}
+	
+	return NO;
+}
+
 
 #pragma mark Footer
 
