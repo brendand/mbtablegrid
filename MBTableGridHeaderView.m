@@ -214,18 +214,20 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 						NSCellHitResult hitResult = [self.headerCell hitTestForEvent:theEvent inRect:cellFrame ofView:self];
 						if (hitResult != NSCellHitNone) {
 							[[self tableGrid] sortButtonClickedOnColumn:column];
+						} else {
+							if([[self tableGrid].selectedColumnIndexes containsIndex:column] && [[self tableGrid].selectedRowIndexes count] == [self tableGrid].numberOfRows) {
+								// Allow the user to drag the column
+								shouldDragItems = YES;
+							} else {
+								[self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndex:column];
+								// Select every row
+								[self tableGrid].selectedRowIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0,[self tableGrid].numberOfRows)];
+							}
 						}
 					}
 					
-                    if([[self tableGrid].selectedColumnIndexes containsIndex:column] && [[self tableGrid].selectedRowIndexes count] == [self tableGrid].numberOfRows) {
-                        // Allow the user to drag the column
-                        shouldDragItems = YES;
-                    } else {
-                        [self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndex:column];
-                        // Select every row
-                        [self tableGrid].selectedRowIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0,[self tableGrid].numberOfRows)];
-                    }
-                } else if(self.orientation == MBTableHeaderVerticalOrientation) {
+					
+				} else if(self.orientation == MBTableHeaderVerticalOrientation) {
                     mouseDownItem = row;
                     
                     if([[self tableGrid].selectedRowIndexes containsIndex:row] && [[self tableGrid].selectedColumnIndexes count] == [self tableGrid].numberOfColumns) {
