@@ -311,7 +311,7 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
             }
             
             // If there's nothing under the mouse, bail out (something went wrong)
-            if (itemUnderMouse < 0)
+            if (itemUnderMouse < 0 || itemUnderMouse == NSNotFound)
                 return;
             
             // Calculate the range of items to select

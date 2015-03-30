@@ -530,7 +530,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		} else {
 			// No modifier keys, so change the selection
 			[self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndex:mouseDownColumn];
-			if (![[self tableGrid].selectedRowIndexes containsIndex:mouseDownRow]) {
+			if (![[self tableGrid].selectedRowIndexes containsIndex:mouseDownRow] || self.tableGrid.selectedRowIndexes.count > 1) {
 				[self tableGrid].selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:mouseDownRow];
 			}
 			[[self tableGrid] _setStickyColumn:MBTableGridLeftEdge row:MBTableGridTopEdge];
