@@ -522,7 +522,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 			
 			// Select the proper cells
 			[self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndexesInRange:selectionColumnRange];
-			[self tableGrid].selectedRowIndexes = [NSIndexSet indexSetWithIndexesInRange:selectionRowRange];
+			[self tableGrid].selectedRowIndexes = [NSMutableIndexSet indexSetWithIndexesInRange:selectionRowRange];
 			
 			// Set the sticky edges
 			[[self tableGrid] _setStickyColumn:stickyColumnEdge row:stickyRowEdge];
@@ -531,7 +531,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 			// No modifier keys, so change the selection
 			[self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndex:mouseDownColumn];
 			if (![[self tableGrid].selectedRowIndexes containsIndex:mouseDownRow]) {
-				[self tableGrid].selectedRowIndexes = [NSIndexSet indexSetWithIndex:mouseDownRow];
+				[self tableGrid].selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:mouseDownRow];
 			}
 			[[self tableGrid] _setStickyColumn:MBTableGridLeftEdge row:MBTableGridTopEdge];
 		}
@@ -620,7 +620,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 				rowEdge = MBTableGridBottomEdge;
 			}
 			
-			[self tableGrid].selectedRowIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(firstRowToSelect,numberOfRowsToSelect)];
+			[self tableGrid].selectedRowIndexes = [NSMutableIndexSet indexSetWithIndexesInRange:NSMakeRange(firstRowToSelect,numberOfRowsToSelect)];
 			
 		}
 		
@@ -899,7 +899,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		[self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndex:editedColumn];
 	}
 	if([[self tableGrid].selectedRowIndexes count] > 1 && editedRow != NSNotFound) {
-		[self tableGrid].selectedRowIndexes = [NSIndexSet indexSetWithIndex:editedRow];
+		[self tableGrid].selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:editedRow];
 	}
 
 	// Editing a button cell involves simply toggling its state, we don't need to change the edited column and row or enter an editing state

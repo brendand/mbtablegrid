@@ -147,7 +147,8 @@ typedef enum {
     
     NSMutableDictionary *columnWidths;
 	NSMutableArray *columnIndexNames;
-    
+	
+	NSUInteger firstSelectedRow;
 }
 
 #pragma mark -
@@ -288,7 +289,7 @@ typedef enum {
  * @see			selectedColumnIndexes
  * @see			selectCellsInColumns:rows:
  */
-@property(nonatomic, strong) NSIndexSet *selectedRowIndexes;
+@property(nonatomic, strong) NSMutableIndexSet *selectedRowIndexes;
 
 /**
  * @}
@@ -1205,7 +1206,7 @@ typedef enum {
  *
  * @see			tableGrid:willSelectColumnsAtIndexPath:
  */
-- (NSIndexSet *)tableGrid:(MBTableGrid *)aTableGrid willSelectRowsAtIndexPath:(NSIndexSet *)indexPath;
+- (NSMutableIndexSet *)tableGrid:(MBTableGrid *)aTableGrid willSelectRowsAtIndexPath:(NSMutableIndexSet *)indexPath;
 
 /**
  * @brief		Informs the delegate that the table grid's selection has changed.

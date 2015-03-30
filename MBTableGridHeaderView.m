@@ -224,7 +224,7 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 							} else {
 								[self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndex:column];
 								// Select every row
-								[self tableGrid].selectedRowIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0,[self tableGrid].numberOfRows)];
+								[self tableGrid].selectedRowIndexes = [NSMutableIndexSet indexSetWithIndexesInRange:NSMakeRange(0,[self tableGrid].numberOfRows)];
 							}
 						}
 					}
@@ -237,7 +237,7 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
                         // Allow the user to drag the row
                         shouldDragItems = YES;
                     } else {
-                        [self tableGrid].selectedRowIndexes = [NSIndexSet indexSetWithIndex:row];
+                        [self tableGrid].selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:row];
                         // Select every column
                         [self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0,[self tableGrid].numberOfColumns)];
                     }
@@ -326,7 +326,7 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
             if (self.orientation == MBTableHeaderHorizontalOrientation) {
                 [self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(firstItemToSelect, numberOfItemsToSelect)];
             } else if (self.orientation == MBTableHeaderVerticalOrientation) {
-                [self tableGrid].selectedRowIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(firstItemToSelect, numberOfItemsToSelect)];
+                [self tableGrid].selectedRowIndexes = [NSMutableIndexSet indexSetWithIndexesInRange:NSMakeRange(firstItemToSelect, numberOfItemsToSelect)];
             }
         }
         
@@ -367,9 +367,9 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
             if (self.orientation == MBTableHeaderHorizontalOrientation) {
                 [self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndex:mouseDownItem];
                 // Select every row
-                [self tableGrid].selectedRowIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0,[self tableGrid].numberOfRows)];
+                [self tableGrid].selectedRowIndexes = [NSMutableIndexSet indexSetWithIndexesInRange:NSMakeRange(0,[self tableGrid].numberOfRows)];
             } else if (self.orientation == MBTableHeaderVerticalOrientation) {
-                [self tableGrid].selectedRowIndexes = [NSIndexSet indexSetWithIndex:mouseDownItem];
+                [self tableGrid].selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:mouseDownItem];
                 // Select every column
                 [self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0,[self tableGrid].numberOfColumns)];
             }
