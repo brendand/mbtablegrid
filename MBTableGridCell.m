@@ -92,6 +92,11 @@
 
 	static CGFloat TEXT_PADDING = 4;
 	cellFrame = NSInsetRect(cellFrame, TEXT_PADDING, 0);
+	if (self.isGroupRow) {
+		cellFrame.origin.y -= 1;
+	} else {
+		cellFrame.origin.y += 1;
+	}
 	
 	[self drawInteriorWithFrame:cellFrame inView:controlView];
 }
@@ -100,6 +105,20 @@
 {
 	// Do not draw any highlight.
 	return nil;
+}
+
+- (NSCellHitResult)hitTestForEvent:(NSEvent *)event inRect:(NSRect)cellFrame ofView:(NSView *)controlView {
+	
+	NSRect accessoryButtonFrame = cellFrame;
+	accessoryButtonFrame.size.width = 16.0;
+	accessoryButtonFrame.size.height = 16.0;
+	accessoryButtonFrame.origin.x = cellFrame.origin.x + cellFrame.size.width - accessoryButtonFrame.size.width - 4;
+	
+	// adjust rect for top border
+	accessoryButtonFrame.origin.y += 1;
+	
+	CGPoint eventLocationInControlView = [controlView convertPoint:event.locationInWindow fromView:nil];
+	return CGRectContainsPoint(accessoryButtonFrame, eventLocationInControlView) ? NSCellHitContentArea : NSCellHitNone;
 }
 
 @end

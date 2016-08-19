@@ -58,5 +58,6 @@ typedef enum _MBTableGridHeaderOrientation {
 
 @property (nonatomic, strong) NSTrackingArea *resizeTrackingArea;
 
+@property (nonatomic, strong) NSColor *rowTagColor;
 
 @end

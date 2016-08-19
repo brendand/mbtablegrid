@@ -41,6 +41,7 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 - (void)_dragRowsWithEvent:(NSEvent *)theEvent;
 - (void)sortButtonClickedOnColumn:(NSUInteger)columnIndex;
 - (BOOL)_isGroupRow:(NSUInteger)rowIndex;
+- (NSColor *)_tagColorForRow:(NSUInteger)rowIndex;
 - (MBSortDirection)_sortDirectionForColumn:(NSUInteger)columnIndex;
 @end
 
@@ -168,6 +169,10 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 				} else {
 					[headerCell setStringValue:@""];
 				}
+				
+				NSColor *rowTagColor = [[self tableGrid] _tagColorForRow:row];
+				headerCell.rowTagColor = rowTagColor;
+				
 				[headerCell drawWithFrame:headerRect inView:self];
 			}
 			
@@ -193,6 +198,10 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 	mouseDownLocation = loc;
 	NSInteger column = [[self tableGrid] columnAtPoint:[self convertPoint:loc toView:[self tableGrid]]];
 	NSInteger row = [[self tableGrid] rowAtPoint:[self convertPoint:loc toView:[self tableGrid]]];
+	
+	if (self.orientation == MBTableHeaderVerticalOrientation && [[self tableGrid] _isGroupRow:row]) {
+		return;
+	}
 	
     if (canResize) {
         
@@ -224,7 +233,19 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 							} else {
 								[self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndex:column];
 								// Select every row
-								[self tableGrid].selectedRowIndexes = [NSMutableIndexSet indexSetWithIndexesInRange:NSMakeRange(0,[self tableGrid].numberOfRows)];
+								
+								NSMutableIndexSet *indexSet = [[NSMutableIndexSet alloc] init];
+								NSInteger rowCount = [self tableGrid].numberOfRows;
+								
+								for (NSInteger row = 0; row < rowCount; row++) {
+									BOOL isGroupRow = [[[[self tableGrid] contentView] groupRowIndexes] objectForKey:@(row)] != nil;
+									if (!isGroupRow) {
+										[indexSet addIndex:row];
+									}
+								}
+								
+								[self tableGrid].selectedRowIndexes = indexSet;
+								
 							}
 						}
 					}
@@ -367,7 +388,19 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
             if (self.orientation == MBTableHeaderHorizontalOrientation) {
                 [self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndex:mouseDownItem];
                 // Select every row
-                [self tableGrid].selectedRowIndexes = [NSMutableIndexSet indexSetWithIndexesInRange:NSMakeRange(0,[self tableGrid].numberOfRows)];
+				NSMutableIndexSet *indexSet = [[NSMutableIndexSet alloc] init];
+				
+				NSInteger rowCount = [self tableGrid].numberOfRows;
+				for (NSInteger row = 0; row < rowCount; row++) {
+					BOOL isGroupRow = [[[[self tableGrid] contentView] groupRowIndexes] objectForKey:@(row)] != nil;
+					if (!isGroupRow) {
+						[indexSet addIndex:row];
+					}
+				}
+				
+				[self tableGrid].selectedRowIndexes = indexSet;
+				
+				
             } else if (self.orientation == MBTableHeaderVerticalOrientation) {
                 [self tableGrid].selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:mouseDownItem];
                 // Select every column

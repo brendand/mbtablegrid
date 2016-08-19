@@ -70,6 +70,12 @@
 		// Draw the bottom border
 		NSRect bottomLine = NSMakeRect(NSMinX(cellFrameRect), NSMaxY(cellFrameRect)-1.0, NSWidth(cellFrameRect), 1.0);
 		NSRectFill(bottomLine);
+		
+		if (self.rowTagColor) {
+			NSRect tagLine = NSMakeRect(NSMinX(cellFrameRect) + 2.0, NSMinY(cellFrameRect), 4.0, NSHeight(cellFrameRect) - 1.0);
+			[self.rowTagColor set];
+			NSRectFill(tagLine);
+		}
 	}
 	
 	if([self state] == NSOnState) {
@@ -88,7 +94,7 @@
 		if (sortIndicatorFrame.size.width > kMAX_INDICATOR_WIDTH) {
 			sortIndicatorFrame.size.width = kMAX_INDICATOR_WIDTH;
 		}
-		sortIndicatorFrame.origin.x = cellFrame.origin.x + cellFrame.size.width - sortIndicatorFrame.size.width - 4;
+		sortIndicatorFrame.origin.x = cellFrame.origin.x + cellFrame.size.width - sortIndicatorFrame.size.width - 6;
 		sortIndicatorFrame.origin.y = sortIndicatorFrame.size.height / 2;
 		
 		// adjust rect for top border

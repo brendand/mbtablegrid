@@ -94,13 +94,13 @@ NSString * const ColumnText4 = @"text4";
     formatters = @{ColumnCurrency : decimalFormatter, ColumnDate : dateFormatter};
     
 	// Add 10 columns & rows
-    [self tableGrid:tableGrid addColumns:20 shouldReload:NO];
-    [self tableGrid:tableGrid addRows:300 shouldReload:NO];
+    [self tableGrid:tableGrid addColumns:10 shouldReload:NO];
+    [self tableGrid:tableGrid addRows:5000 shouldReload:NO];
+	
+	[tableGrid setSortAscendingImage:[NSImage imageNamed:@"sort-asc"] sortDescendingImage:[NSImage imageNamed:@"sort-desc"] sortUndeterminedImage:nil];
 	
 	[tableGrid reloadData];
 	
-	[tableGrid setSortAscendingImage:[NSImage imageNamed:@"sort-asc"] sortDescendingImage:[NSImage imageNamed:@"sort-desc"] sortUndeterminedImage:[NSImage imageNamed:@"sort-none"]];
-
 	// Register to receive text strings
 	[tableGrid registerForDraggedTypes:@[NSStringPboardType]];
 	
@@ -119,7 +119,6 @@ NSString * const ColumnText4 = @"text4";
 	
 	
 	self.textCell = [[MBTableGridCell alloc] initTextCell:@""];
-	self.textCell.lineBreakMode = NSLineBreakByTruncatingTail;
 	
 	self.checkboxCell = [[MBButtonCell alloc] init];
 	self.checkboxCell.state = NSOffState;
@@ -184,19 +183,11 @@ NSString * const ColumnText4 = @"text4";
 }
 
 - (NSString *)tableGrid:(MBTableGrid *)aTableGrid headerStringForColumn:(NSUInteger)columnIndex {
-	return [NSString stringWithFormat:@"Header Column %lu", columnIndex];
+	return [NSString stringWithFormat:@"Column %lu", columnIndex];
 }
 
 - (id)tableGrid:(MBTableGrid *)aTableGrid objectValueForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex
 {
-	if (rowIndex == 0) {
-		return @"Group Header 1";
-	}
-	
-	if (rowIndex == 5) {
-		return @"Group Header 2";
-	}
-	
 	if (columnIndex >= [columns count]) {
 		return nil;
 	}
@@ -233,16 +224,6 @@ NSString * const ColumnText4 = @"text4";
 	return YES;
 }
 
-- (BOOL)tableGrid:(MBTableGrid *)aTableGrid shouldFillColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
-	
-	NSString *columnIdentifier = self.columnIdentifiers[columnIndex];
-	if (columnIdentifier == ColumnImage) {
-		return NO;
-	} else {
-		return YES;
-	}
-}
-
 - (NSFormatter *)tableGrid:(MBTableGrid *)aTableGrid formatterForColumn:(NSUInteger)columnIndex
 {
     NSString *columnIdentifier = self.columnIdentifiers[columnIndex];
@@ -274,7 +255,7 @@ NSString * const ColumnText4 = @"text4";
 	
     NSString *columnIdentifier = self.columnIdentifiers[columnIndex];
     
-	if (columnIdentifier == ColumnRating || columnIdentifier == ColumnPopup) {
+	if (columnIdentifier != ColumnImage) {
 		return nil;
 	}
 	
@@ -362,23 +343,6 @@ NSString * const ColumnText4 = @"text4";
         return [NSColor colorWithDeviceWhite:0.950 alpha:1.000];
     else
         return nil;
-}
-
-- (BOOL)tableGrid:(MBTableGrid *)aTableGrid isGroupRow:(NSUInteger)rowIndex {
-	if (rowIndex == 0 || rowIndex == 5) {
-		return YES;
-	}
-	return NO;
-}
-
-- (MBSortDirection)tableGrid:(MBTableGrid *)aTableGrid sortDirectionForColumn:(NSUInteger)columnIndex {
-	if (columnIndex == 1) {
-		return MBSortAscending;
-	} else if (columnIndex == 3) {
-		return MBSortDescending;
-	} else {
-		return MBSortUndetermined;
-	}
 }
 
 #pragma mark Footer
@@ -770,15 +734,6 @@ NSString * const ColumnText4 = @"text4";
 - (void)tableGrid:(MBTableGrid *)aTableGrid didAddRows:(NSIndexSet *)rowIndexes;
 {
     // Add the rows to the database, or whatever is needed
-}
-
-- (NSUndoManager *)undoManagerForTableGrid:(MBTableGrid *)aTableGrid;
-{
-    return aTableGrid.window.undoManager;
-}
-
-- (void)tableGrid:(MBTableGrid *)aTableGrid didSortColumn:(NSUInteger)columnIndex {
-	NSLog(@"did sort column: %lu", (unsigned long)columnIndex);
 }
 
 #pragma mark - QuickLook

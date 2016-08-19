@@ -7,19 +7,17 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		173D292D1AA1779F009945FC /* MBFooterTextCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 173D292B1AA1779F009945FC /* MBFooterTextCell.h */; };
+		173D292D1AA1779F009945FC /* MBFooterTextCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 173D292B1AA1779F009945FC /* MBFooterTextCell.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		173D292E1AA1779F009945FC /* MBFooterTextCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 173D292C1AA1779F009945FC /* MBFooterTextCell.m */; };
 		8D11072A0486CEB800E47090 /* MainMenu.nib in Resources */ = {isa = PBXBuildFile; fileRef = 29B97318FDCFA39411CA2CEA /* MainMenu.nib */; };
 		8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C165CFE840E0CC02AAC07 /* InfoPlist.strings */; };
 		8D11072D0486CEB800E47090 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; settings = {ATTRIBUTES = (); }; };
 		8D11072F0486CEB800E47090 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
-		C608243A1AC65B3800C70ACC /* sort-none.png in Resources */ = {isa = PBXBuildFile; fileRef = C60824381AC65B3800C70ACC /* sort-none.png */; };
-		C608243B1AC65B3800C70ACC /* sort-none@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = C60824391AC65B3800C70ACC /* sort-none@2x.png */; };
-		C63413B61A19F857001E9DF0 /* MBLevelIndicatorCell.h in Headers */ = {isa = PBXBuildFile; fileRef = C63413B41A19F857001E9DF0 /* MBLevelIndicatorCell.h */; };
+		C63413B61A19F857001E9DF0 /* MBLevelIndicatorCell.h in Headers */ = {isa = PBXBuildFile; fileRef = C63413B41A19F857001E9DF0 /* MBLevelIndicatorCell.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		C63413B71A19F857001E9DF0 /* MBLevelIndicatorCell.m in Sources */ = {isa = PBXBuildFile; fileRef = C63413B51A19F857001E9DF0 /* MBLevelIndicatorCell.m */; };
-		C639542C19FF3B7C0029BDF1 /* MBPopupButtonCell.h in Headers */ = {isa = PBXBuildFile; fileRef = C639542A19FF3B7C0029BDF1 /* MBPopupButtonCell.h */; };
+		C639542C19FF3B7C0029BDF1 /* MBPopupButtonCell.h in Headers */ = {isa = PBXBuildFile; fileRef = C639542A19FF3B7C0029BDF1 /* MBPopupButtonCell.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		C639542D19FF3B7C0029BDF1 /* MBPopupButtonCell.m in Sources */ = {isa = PBXBuildFile; fileRef = C639542B19FF3B7C0029BDF1 /* MBPopupButtonCell.m */; };
-		C639543019FF84FA0029BDF1 /* MBButtonCell.h in Headers */ = {isa = PBXBuildFile; fileRef = C639542E19FF84FA0029BDF1 /* MBButtonCell.h */; };
+		C639543019FF84FA0029BDF1 /* MBButtonCell.h in Headers */ = {isa = PBXBuildFile; fileRef = C639542E19FF84FA0029BDF1 /* MBButtonCell.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		C639543219FF84FA0029BDF1 /* MBButtonCell.m in Sources */ = {isa = PBXBuildFile; fileRef = C639542F19FF84FA0029BDF1 /* MBButtonCell.m */; };
 		C63DB4CD1A19E2F70069BF5D /* QuickLook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C63DB4CB1A19DA030069BF5D /* QuickLook.framework */; };
 		C63DB4CE1A19E3C40069BF5D /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C646837F18DB8634008700EF /* Quartz.framework */; };
@@ -29,20 +27,19 @@
 		C63F9EB9186AE60C00DB171F /* sort-desc@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = C63F9EB5186AE60C00DB171F /* sort-desc@2x.png */; };
 		C646838118DB8658008700EF /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C646837D18DB862A008700EF /* QuartzCore.framework */; };
 		C646838218DB8897008700EF /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C646837D18DB862A008700EF /* QuartzCore.framework */; };
-		C67CAB5B1ABEC1730020DF4E /* VerticalResizeCursor.tiff in Resources */ = {isa = PBXBuildFile; fileRef = C67CAB5A1ABEC1730020DF4E /* VerticalResizeCursor.tiff */; };
-		C6AB1C261A15C3AB0092B29C /* MBImageCell.h in Headers */ = {isa = PBXBuildFile; fileRef = C6AB1C241A15C3AB0092B29C /* MBImageCell.h */; };
+		C6AB1C261A15C3AB0092B29C /* MBImageCell.h in Headers */ = {isa = PBXBuildFile; fileRef = C6AB1C241A15C3AB0092B29C /* MBImageCell.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		C6AB1C271A15C3AB0092B29C /* MBImageCell.m in Sources */ = {isa = PBXBuildFile; fileRef = C6AB1C251A15C3AB0092B29C /* MBImageCell.m */; };
 		C6AB1C291A15F0DF0092B29C /* rose.jpg in Resources */ = {isa = PBXBuildFile; fileRef = C6AB1C281A15F0DF0092B29C /* rose.jpg */; };
 		C6AB1C2E1A16B18B0092B29C /* acc-quicklook.png in Resources */ = {isa = PBXBuildFile; fileRef = C6AB1C2C1A16B18B0092B29C /* acc-quicklook.png */; };
 		C6AB1C2F1A16B18B0092B29C /* acc-quicklook@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = C6AB1C2D1A16B18B0092B29C /* acc-quicklook@2x.png */; };
+		C6BB46D51D677DDE001B409F /* popup-indicator.pdf in Resources */ = {isa = PBXBuildFile; fileRef = C6BB46D41D677DDE001B409F /* popup-indicator.pdf */; };
 		C6BF26871A4AC4EE008EB93F /* MBTableGridFooterView.m in Sources */ = {isa = PBXBuildFile; fileRef = C6BF26861A4AC4EE008EB93F /* MBTableGridFooterView.m */; };
-		C6BF26891A4AC502008EB93F /* MBTableGridFooterView.h in Headers */ = {isa = PBXBuildFile; fileRef = C6BF26881A4AC502008EB93F /* MBTableGridFooterView.h */; };
-		C6BF268B1A4AC953008EB93F /* MBFooterPopupButtonCell.h in Headers */ = {isa = PBXBuildFile; fileRef = C6BF268A1A4AC953008EB93F /* MBFooterPopupButtonCell.h */; };
+		C6BF26891A4AC502008EB93F /* MBTableGridFooterView.h in Headers */ = {isa = PBXBuildFile; fileRef = C6BF26881A4AC502008EB93F /* MBTableGridFooterView.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		C6BF268B1A4AC953008EB93F /* MBFooterPopupButtonCell.h in Headers */ = {isa = PBXBuildFile; fileRef = C6BF268A1A4AC953008EB93F /* MBFooterPopupButtonCell.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		C6BF268D1A4AC967008EB93F /* MBFooterPopupButtonCell.m in Sources */ = {isa = PBXBuildFile; fileRef = C6BF268C1A4AC967008EB93F /* MBFooterPopupButtonCell.m */; };
 		C9412A5F0D8AE98C00E9E614 /* MBTableGridController.m in Sources */ = {isa = PBXBuildFile; fileRef = C9412A5E0D8AE98C00E9E614 /* MBTableGridController.m */; };
-		CA46E3621A09726A00C43B4B /* MBTableGridEditable.h in Headers */ = {isa = PBXBuildFile; fileRef = CA46E3611A09726A00C43B4B /* MBTableGridEditable.h */; };
+		CA46E3621A09726A00C43B4B /* MBTableGridEditable.h in Headers */ = {isa = PBXBuildFile; fileRef = CA46E3611A09726A00C43B4B /* MBTableGridEditable.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		E2E62BAC1781C33500F36275 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E2E62BAB1781C33400F36275 /* Cocoa.framework */; };
-		E2E62BB21781C33500F36275 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = E2E62BB01781C33500F36275 /* InfoPlist.strings */; };
 		E2E62BBA1781C37300F36275 /* MBTableGrid.m in Sources */ = {isa = PBXBuildFile; fileRef = C9412A3E0D8A061C00E9E614 /* MBTableGrid.m */; };
 		E2E62BBB1781C37600F36275 /* MBTableGridContentView.m in Sources */ = {isa = PBXBuildFile; fileRef = C9412B210D8B2C5E00E9E614 /* MBTableGridContentView.m */; };
 		E2E62BBC1781C37800F36275 /* MBTableGridHeaderView.m in Sources */ = {isa = PBXBuildFile; fileRef = C9412B390D8B2F5400E9E614 /* MBTableGridHeaderView.m */; };
@@ -50,10 +47,10 @@
 		E2E62BBE1781C38000F36275 /* MBTableGridCell.m in Sources */ = {isa = PBXBuildFile; fileRef = C9412D7C0D8B5AB900E9E614 /* MBTableGridCell.m */; };
 		E2E62BBF1781C3FE00F36275 /* MBTableGrid.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E2E62BAA1781C33400F36275 /* MBTableGrid.framework */; };
 		E2E62BF71781C53800F36275 /* MBTableGrid.h in Headers */ = {isa = PBXBuildFile; fileRef = C9412A3D0D8A061C00E9E614 /* MBTableGrid.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		E2E62BF81781C53800F36275 /* MBTableGridContentView.h in Headers */ = {isa = PBXBuildFile; fileRef = C9412B200D8B2C5E00E9E614 /* MBTableGridContentView.h */; };
-		E2E62BF91781C53800F36275 /* MBTableGridHeaderView.h in Headers */ = {isa = PBXBuildFile; fileRef = C9412B380D8B2F5400E9E614 /* MBTableGridHeaderView.h */; };
-		E2E62BFA1781C53800F36275 /* MBTableGridHeaderCell.h in Headers */ = {isa = PBXBuildFile; fileRef = C9412A490D8A294F00E9E614 /* MBTableGridHeaderCell.h */; };
-		E2E62BFB1781C53800F36275 /* MBTableGridCell.h in Headers */ = {isa = PBXBuildFile; fileRef = C9412D7B0D8B5AB900E9E614 /* MBTableGridCell.h */; };
+		E2E62BF81781C53800F36275 /* MBTableGridContentView.h in Headers */ = {isa = PBXBuildFile; fileRef = C9412B200D8B2C5E00E9E614 /* MBTableGridContentView.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		E2E62BF91781C53800F36275 /* MBTableGridHeaderView.h in Headers */ = {isa = PBXBuildFile; fileRef = C9412B380D8B2F5400E9E614 /* MBTableGridHeaderView.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		E2E62BFA1781C53800F36275 /* MBTableGridHeaderCell.h in Headers */ = {isa = PBXBuildFile; fileRef = C9412A490D8A294F00E9E614 /* MBTableGridHeaderCell.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		E2E62BFB1781C53800F36275 /* MBTableGridCell.h in Headers */ = {isa = PBXBuildFile; fileRef = C9412D7B0D8B5AB900E9E614 /* MBTableGridCell.h */; settings = {ATTRIBUTES = (Public, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -67,10 +64,11 @@
 		29B97324FDCFA39411CA2CEA /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
 		29B97325FDCFA39411CA2CEA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
 		32CA4F630368D1EE00C91783 /* MBTableGrid_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MBTableGrid_Prefix.pch; sourceTree = "<group>"; };
+		6593B73F1AA37B6200BE9726 /* nl */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = nl; path = nl.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		6593B7401AA37B6200BE9726 /* nl */ = {isa = PBXFileReference; lastKnownFileType = wrapper.nib; name = nl; path = nl.lproj/MainMenu.nib; sourceTree = "<group>"; };
+		6593B7411AA37B6200BE9726 /* nl */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = nl; path = nl.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		8D1107310486CEB800E47090 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		8D1107320486CEB800E47090 /* MBTableGrid.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MBTableGrid.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		C60824381AC65B3800C70ACC /* sort-none.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "sort-none.png"; sourceTree = "<group>"; };
-		C60824391AC65B3800C70ACC /* sort-none@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "sort-none@2x.png"; sourceTree = "<group>"; };
 		C63413B41A19F857001E9DF0 /* MBLevelIndicatorCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MBLevelIndicatorCell.h; sourceTree = SOURCE_ROOT; };
 		C63413B51A19F857001E9DF0 /* MBLevelIndicatorCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MBLevelIndicatorCell.m; sourceTree = SOURCE_ROOT; };
 		C639542A19FF3B7C0029BDF1 /* MBPopupButtonCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MBPopupButtonCell.h; sourceTree = SOURCE_ROOT; };
@@ -84,12 +82,12 @@
 		C63F9EB5186AE60C00DB171F /* sort-desc@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "sort-desc@2x.png"; sourceTree = "<group>"; };
 		C646837D18DB862A008700EF /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		C646837F18DB8634008700EF /* Quartz.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Quartz.framework; path = System/Library/Frameworks/Quartz.framework; sourceTree = SDKROOT; };
-		C67CAB5A1ABEC1730020DF4E /* VerticalResizeCursor.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = VerticalResizeCursor.tiff; sourceTree = "<group>"; };
 		C6AB1C241A15C3AB0092B29C /* MBImageCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MBImageCell.h; sourceTree = SOURCE_ROOT; };
 		C6AB1C251A15C3AB0092B29C /* MBImageCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MBImageCell.m; sourceTree = SOURCE_ROOT; };
 		C6AB1C281A15F0DF0092B29C /* rose.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = rose.jpg; sourceTree = "<group>"; };
 		C6AB1C2C1A16B18B0092B29C /* acc-quicklook.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "acc-quicklook.png"; sourceTree = "<group>"; };
 		C6AB1C2D1A16B18B0092B29C /* acc-quicklook@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "acc-quicklook@2x.png"; sourceTree = "<group>"; };
+		C6BB46D41D677DDE001B409F /* popup-indicator.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "popup-indicator.pdf"; sourceTree = "<group>"; };
 		C6BF26861A4AC4EE008EB93F /* MBTableGridFooterView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MBTableGridFooterView.m; sourceTree = SOURCE_ROOT; };
 		C6BF26881A4AC502008EB93F /* MBTableGridFooterView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MBTableGridFooterView.h; sourceTree = SOURCE_ROOT; };
 		C6BF268A1A4AC953008EB93F /* MBFooterPopupButtonCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MBFooterPopupButtonCell.h; sourceTree = SOURCE_ROOT; };
@@ -203,8 +201,7 @@
 				8D1107310486CEB800E47090 /* Info.plist */,
 				089C165CFE840E0CC02AAC07 /* InfoPlist.strings */,
 				29B97318FDCFA39411CA2CEA /* MainMenu.nib */,
-				C60824381AC65B3800C70ACC /* sort-none.png */,
-				C60824391AC65B3800C70ACC /* sort-none@2x.png */,
+				C6BB46D41D677DDE001B409F /* popup-indicator.pdf */,
 				C63F9EB2186AE60C00DB171F /* sort-asc.png */,
 				C63F9EB3186AE60C00DB171F /* sort-asc@2x.png */,
 				C63F9EB4186AE60C00DB171F /* sort-desc.png */,
@@ -212,7 +209,6 @@
 				C6AB1C281A15F0DF0092B29C /* rose.jpg */,
 				C6AB1C2C1A16B18B0092B29C /* acc-quicklook.png */,
 				C6AB1C2D1A16B18B0092B29C /* acc-quicklook@2x.png */,
-				C67CAB5A1ABEC1730020DF4E /* VerticalResizeCursor.tiff */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -281,18 +277,18 @@
 			buildActionMask = 2147483647;
 			files = (
 				173D292D1AA1779F009945FC /* MBFooterTextCell.h in Headers */,
-				E2E62BF71781C53800F36275 /* MBTableGrid.h in Headers */,
+				E2E62BFB1781C53800F36275 /* MBTableGridCell.h in Headers */,
 				C6BF268B1A4AC953008EB93F /* MBFooterPopupButtonCell.h in Headers */,
 				C639543019FF84FA0029BDF1 /* MBButtonCell.h in Headers */,
 				CA46E3621A09726A00C43B4B /* MBTableGridEditable.h in Headers */,
-				E2E62BF81781C53800F36275 /* MBTableGridContentView.h in Headers */,
 				C639542C19FF3B7C0029BDF1 /* MBPopupButtonCell.h in Headers */,
-				E2E62BF91781C53800F36275 /* MBTableGridHeaderView.h in Headers */,
 				C6AB1C261A15C3AB0092B29C /* MBImageCell.h in Headers */,
-				C6BF26891A4AC502008EB93F /* MBTableGridFooterView.h in Headers */,
-				E2E62BFB1781C53800F36275 /* MBTableGridCell.h in Headers */,
 				C63413B61A19F857001E9DF0 /* MBLevelIndicatorCell.h in Headers */,
 				E2E62BFA1781C53800F36275 /* MBTableGridHeaderCell.h in Headers */,
+				E2E62BF71781C53800F36275 /* MBTableGrid.h in Headers */,
+				E2E62BF81781C53800F36275 /* MBTableGridContentView.h in Headers */,
+				E2E62BF91781C53800F36275 /* MBTableGridHeaderView.h in Headers */,
+				C6BF26891A4AC502008EB93F /* MBTableGridFooterView.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -341,7 +337,7 @@
 		29B97313FDCFA39411CA2CEA /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0510;
+				LastUpgradeCheck = 0700;
 			};
 			buildConfigurationList = C01FCF4E08A954540054247B /* Build configuration list for PBXProject "MBTableGrid" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -349,6 +345,7 @@
 			hasScannedForEncodings = 1;
 			knownRegions = (
 				en,
+				nl,
 			);
 			mainGroup = 29B97314FDCFA39411CA2CEA /* MBTableGrid */;
 			projectDirPath = "";
@@ -371,11 +368,9 @@
 				C6AB1C2E1A16B18B0092B29C /* acc-quicklook.png in Resources */,
 				8D11072A0486CEB800E47090 /* MainMenu.nib in Resources */,
 				C63F9EB6186AE60C00DB171F /* sort-asc.png in Resources */,
-				C608243B1AC65B3800C70ACC /* sort-none@2x.png in Resources */,
-				C67CAB5B1ABEC1730020DF4E /* VerticalResizeCursor.tiff in Resources */,
 				8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */,
+				C6BB46D51D677DDE001B409F /* popup-indicator.pdf in Resources */,
 				C6AB1C291A15F0DF0092B29C /* rose.jpg in Resources */,
-				C608243A1AC65B3800C70ACC /* sort-none.png in Resources */,
 				C63F9EB9186AE60C00DB171F /* sort-desc@2x.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -384,7 +379,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E2E62BB21781C33500F36275 /* InfoPlist.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -426,6 +420,7 @@
 			isa = PBXVariantGroup;
 			children = (
 				089C165DFE840E0CC02AAC07 /* English */,
+				6593B73F1AA37B6200BE9726 /* nl */,
 			);
 			name = InfoPlist.strings;
 			sourceTree = "<group>";
@@ -434,6 +429,7 @@
 			isa = PBXVariantGroup;
 			children = (
 				29B97319FDCFA39411CA2CEA /* English */,
+				6593B7401AA37B6200BE9726 /* nl */,
 			);
 			name = MainMenu.nib;
 			sourceTree = "<group>";
@@ -442,6 +438,7 @@
 			isa = PBXVariantGroup;
 			children = (
 				E2E62BB11781C33500F36275 /* en */,
+				6593B7411AA37B6200BE9726 /* nl */,
 			);
 			name = InfoPlist.strings;
 			sourceTree = "<group>";
@@ -464,6 +461,7 @@
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
 				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yourcompany.MBTableGrid;
 				PRODUCT_NAME = MBTableGrid;
 				SDKROOT = macosx;
 			};
@@ -482,6 +480,7 @@
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
 				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yourcompany.MBTableGrid;
 				PRODUCT_NAME = MBTableGrid;
 				SDKROOT = macosx;
 			};
@@ -491,6 +490,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ENABLE_TESTABILITY = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
@@ -529,7 +529,6 @@
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "MBTableGrid/MBTableGrid-Prefix.pch";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
@@ -537,10 +536,12 @@
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				INFOPLIST_FILE = "MBTableGrid/MBTableGrid-Info.plist";
+				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "@loader_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yourcompany.MBTableGrid;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
 				WRAPPER_EXTENSION = framework;
 			};
 			name = Debug;
@@ -565,13 +566,14 @@
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "MBTableGrid/MBTableGrid-Prefix.pch";
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				INFOPLIST_FILE = "MBTableGrid/MBTableGrid-Info.plist";
+				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "@loader_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yourcompany.MBTableGrid;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
 				WRAPPER_EXTENSION = framework;
 			};
 			name = Release;

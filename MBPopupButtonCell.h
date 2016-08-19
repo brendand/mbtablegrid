@@ -8,10 +8,17 @@
 
 #import <Cocoa/Cocoa.h>
 
-@interface MBPopupButtonCell : NSPopUpButtonCell
+@interface MBPopupButtonCell : NSComboBoxCell {
+	NSImage *_arrowImage;
+	NSImage *_highlightedArrowImage;
+	BOOL _drawHighlightedArrowImage;
+}
 
 @property (nonatomic, strong) NSImage *accessoryButtonImage;
 
 - (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView withBackgroundColor:(NSColor *)backgroundColor;
+
+- (void)synchronizeTitleAndSelectedItem;
+- (NSInteger)indexOfItemWithTitle:(NSString *)aTitle;
 
 @end

@@ -208,6 +208,16 @@ typedef enum {
 - (void)selectRow:(NSUInteger)rowIndex;
 
 /**
+ * @brief		Selects the specified row and column
+ *
+ * @param		rowIndex		The row to select
+ * @param		columnIndex		The column to select
+ *
+ */
+- (void)selectRow:(NSUInteger)rowIndex column:(NSUInteger)columnIndex;
+
+
+/**
  * @brief		Moves the selection down one row
  *
  */
@@ -779,6 +789,19 @@ typedef enum {
 @optional
 
 /**
+ * @brief		Returns the text color for the specified column and row.
+ *
+ * @param		aTableGrid		The table grid that sent the message.
+ * @param		columnIndex		A column in \c aTableGrid.
+ * @param		rowIndex		A row in \c aTableGrid.
+ *
+ * @return		The text color for the specified cell of the view.
+ */
+- (NSColor *)tableGrid:(MBTableGrid *)aTableGrid textColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+
+@optional
+
+/**
  * @brief		Sets the sata object for an item in a given row in a given column.
  *
  * @details		Although this method is optional, it must be implemented in order
@@ -822,10 +845,18 @@ typedef enum {
  *              that spans across the entire row.
  *
  *  @param      aTableGrid       The table grid that contains the cell.
- *  @param      columnIndexes    Column indexes of the cells being copied.
  *  @param      rowIndexes       Row indexes of the cells being copied.
  */
 - (BOOL)tableGrid:(MBTableGrid *)aTableGrid isGroupRow:(NSUInteger)rowIndex;
+
+/**
+ *  @brief      Asks the delegate for the tag color to be displayed on the very left of the specified row
+ *
+ *  @param      aTableGrid       The table grid that contains the cell.
+ *  @param      rowIndexes       Row indexes of the cells being copied.
+ */
+- (NSColor *)tableGrid:(MBTableGrid *)aTableGrid tagColorForRow:(NSUInteger)rowIndex;
+
 
 /**
  * @}

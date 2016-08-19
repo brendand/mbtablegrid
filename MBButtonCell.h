@@ -7,6 +7,7 @@
 //
 
 #import "MBTableGridEditable.h"
+#import <AppKit/AppKit.h>
 
 @interface MBButtonCell : NSButtonCell <MBTableGridEditable>
 
@@ -15,5 +16,7 @@
 #pragma mark - MBTableGridEditable
 
 @property (nonatomic, assign, readonly) BOOL editOnFirstClick;
+
+- (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView withBackgroundColor:(NSColor *)backgroundColor;
 
 @end

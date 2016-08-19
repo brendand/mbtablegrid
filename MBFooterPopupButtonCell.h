@@ -30,7 +30,9 @@
  * @brief		\c MBFooterPopupButtonCell is responsible
  *				for drawing popups in the column footer
  */
-@interface MBFooterPopupButtonCell : MBPopupButtonCell {
+@interface MBFooterPopupButtonCell : NSPopUpButtonCell {
 }
+
+- (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView withBackgroundColor:(NSColor *)backgroundColor;
 
 @end

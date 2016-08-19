@@ -77,6 +77,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 - (float)_widthForColumn:(NSUInteger)columnIndex;
 - (float)_setWidthForColumn:(NSUInteger)columnIndex;
 - (id)_backgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+- (id)_textColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (BOOL)_canEditCellAtColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (BOOL)_canFillCellAtColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (void)_userDidEnterInvalidStringInColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex errorDescription:(NSString *)errorDescription;
@@ -219,7 +220,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 - (void)awakeFromNib {
 //	[self reloadData];
-	[self registerForDraggedTypes:nil];
+	[self registerForDraggedTypes:@[]];
 }
 
 - (void)dealloc {
@@ -569,7 +570,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 			[self scrollToArea:cellRect animate:NO];
 		}
 		else {
-			[self setNeedsDisplay:YES];
+			[self setNeedsDisplayInRect:cellRect];
 		}
 	}
 }
@@ -621,9 +622,8 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		cellRect.origin.x = self.contentView.visibleRect.origin.x;
 		[self scrollToArea:cellRect animate:NO];
 	}
-	else {
-		[self setNeedsDisplay:YES];
-	}
+	
+	[self.contentView setNeedsDisplay:YES];
 	
 }
 
@@ -667,7 +667,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 			[self scrollToArea:cellRect animate:NO];
 		}
 		else {
-            [self setNeedsDisplay:YES];
+			[self setNeedsDisplayInRect:cellRect];
 		}
 	}
 }
@@ -719,9 +719,8 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 			cellRect.origin.x = self.contentView.visibleRect.origin.x;
 			[self scrollToArea:cellRect animate:NO];
 		}
-		else {
-            [self setNeedsDisplay:YES];
-		}
+		
+		[self.contentView setNeedsDisplay:YES];
 	}
 }
 
@@ -750,7 +749,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 			[self scrollToArea:cellRect animate:NO];
 		}
 		else {
-            [self setNeedsDisplay:YES];
+			[self setNeedsDisplayInRect:cellRect];
 		}
 	}
 
@@ -794,9 +793,8 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 			cellRect.origin.y = self.contentView.visibleRect.origin.y;
 			[self scrollToArea:cellRect animate:NO];
 		}
-		else {
-            [self setNeedsDisplay:YES];
-		}
+		
+		[self.contentView setNeedsDisplay:YES];
 	}
 
 
@@ -851,7 +849,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 			[self scrollToArea:cellRect animate:NO];
 		}
 		else {
-            [self setNeedsDisplay:YES];
+			[self setNeedsDisplayInRect:cellRect];
 		}
 	}
 }
@@ -900,18 +898,19 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 			cellRect.origin.y = self.contentView.visibleRect.origin.y;
 			[self scrollToArea:cellRect animate:NO];
 		}
-		else {
-            [self setNeedsDisplay:YES];
-		}
+		
+		[self.contentView setNeedsDisplay:YES];
 	}
 }
 
 - (void)scrollToRow:(NSUInteger)rowIndex animate:(BOOL)shouldAnimate {
-	NSRect rowRect = [self rectOfRow:rowIndex];
-	
-	rowRect = [self convertRect:rowRect toView:contentScrollView.contentView];
-	rowRect.origin.x = self.contentView.visibleRect.origin.x;
-	[self scrollToArea:rowRect animate:shouldAnimate];
+	NSRect cellRect = [self.contentView frameOfCellAtColumn:self.selectedColumnIndexes.firstIndex row:rowIndex];
+	[self scrollToArea:cellRect animate:shouldAnimate];
+}
+
+- (void)scrollToRow:(NSUInteger)rowIndex column:(NSUInteger)columnIndex animate:(BOOL)shouldAnimate {
+	NSRect cellRect = [self.contentView frameOfCellAtColumn:columnIndex row:rowIndex];
+	[self scrollToArea:cellRect animate:shouldAnimate];
 }
 
 - (void)selectRowIndexes:(NSMutableIndexSet *)rowIndexes {
@@ -924,6 +923,12 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	[self scrollToRow:rowIndex animate:YES];
 }
 
+- (void)selectRow:(NSUInteger)rowIndex column:(NSUInteger)columnIndex {
+	self.selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:rowIndex];
+	self.selectedColumnIndexes = [NSIndexSet indexSetWithIndex:columnIndex];
+	[self scrollToRow:rowIndex column:columnIndex animate:YES];
+}
+
 - (void)scrollToArea:(NSRect)area animate:(BOOL)shouldAnimate {
 	if (shouldAnimate) {
 		[NSAnimationContext runAnimationGroup: ^(NSAnimationContext *context) {
@@ -934,7 +939,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	}
 	else {
 		[contentScrollView.contentView scrollToPoint:area.origin];
-        [self setNeedsDisplay:YES];
+		[self setNeedsDisplayInRect:area];
 	}
 }
 
@@ -989,7 +994,11 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	} else {
 		[self _accessoryButtonClicked:column row:row];
 	}
-	[self setNeedsDisplay:YES];
+	
+	NSRect cellRect = [self frameOfCellAtColumn:column row:row];
+	cellRect = [self convertRect:cellRect toView:self.contentView];
+
+	[self setNeedsDisplayInRect:cellRect];
 
 }
 
@@ -1706,6 +1715,9 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		NSColor *sideColor = [NSColor colorWithDeviceWhite:0.8 alpha:0.4];
 		NSColor *borderColor = [NSColor colorWithDeviceWhite:0.8 alpha:1.0];
 
+		[[NSColor whiteColor] set];
+		NSRectFill(aRect);
+		
 		// Draw the top bevel line
 		NSRect topLine = NSMakeRect(NSMinX(aRect), NSMinY(aRect), NSWidth(aRect), 1.0);
 		[topColor set];
@@ -1729,13 +1741,19 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 - (void)_drawCornerFooterBackgroundInRect:(NSRect)aRect {
 	if ([self needsToDrawRect:aRect]) {
-		NSColor *topColor = [NSColor colorWithDeviceWhite:0.8 alpha:1.000];
-		NSColor *sideColor = [NSColor colorWithDeviceWhite:1.0 alpha:0.4];
-		NSColor *borderColor = [NSColor colorWithDeviceWhite:0.8 alpha:1.000];
 		
 		// we only want to draw the bottom border if the footer is hidden
 		
 		if (!_footerHidden) {
+			
+			NSColor *topColor = [NSColor colorWithDeviceWhite:0.8 alpha:1.000];
+			NSColor *sideColor = [NSColor colorWithDeviceWhite:1.0 alpha:0.4];
+			NSColor *borderColor = [NSColor colorWithDeviceWhite:0.8 alpha:1.000];
+			NSColor *backgroundColor = [NSColor colorWithDeviceWhite:0.93 alpha:1.0];
+			
+			[backgroundColor set];
+			NSRectFill(aRect);
+			
 			// Draw the top bevel line
 			NSRect topLine = NSMakeRect(NSMinX(aRect), NSMinY(aRect), NSWidth(aRect), 1.0);
 			[topColor set];
@@ -1787,7 +1805,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		return value;
 	}
 	else {
-		NSLog(@"WARNING: MBTableGrid data source does not implement tableGrid:objectValueForColumn:row:");
+		NSLog(@"WARNING: MBTableGrid data source does not implement tableGrid:objectValueForColumn:row: - dataSource:%@", [self dataSource]);
 	}
 	return nil;
 }
@@ -1833,8 +1851,12 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	if ([[self dataSource] respondsToSelector:@selector(tableGrid:backgroundColorForColumn:row:)]) {
 		return [[self dataSource] tableGrid:self backgroundColorForColumn:columnIndex row:rowIndex];
 	}
-	else {
-		NSLog(@"WARNING: MBTableGrid data source does not implement tableGrid:backgroundColorForColumn:row:");
+	return nil;
+}
+
+- (id)_textColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
+	if ([[self dataSource] respondsToSelector:@selector(tableGrid:textColorForColumn:row:)]) {
+		return [[self dataSource] tableGrid:self textColorForColumn:columnIndex row:rowIndex];
 	}
 	return nil;
 }
@@ -1860,7 +1882,9 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 	if (!column) {
 		column = [NSString stringWithFormat:@"column%lu", columnIndex];
-		columnIndexNames[columnIndex] = column;
+		if (columnIndex != NSNotFound && columnIndex < columnIndexNames.count) {
+			columnIndexNames[columnIndex] = column;
+		}
 	}
 
 	if (columnWidths[column]) {
@@ -1874,11 +1898,15 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 - (float)_setWidthForColumn:(NSUInteger)columnIndex {
 	if ([[self dataSource] respondsToSelector:@selector(tableGrid:setWidthForColumn:)]) {
 		NSString *column = [NSString stringWithFormat:@"column%lu", columnIndex];
-
+		
 		float width = [[self dataSource] tableGrid:self setWidthForColumn:columnIndex];
-		columnWidths[column] = COLUMNFLOATSIZE(width);
-
-		columnIndexNames[columnIndex] = column;
+		if (width > 0 && width != NSNotFound && columnIndex != NSNotFound && columnIndex < columnIndexNames.count) {
+			columnWidths[column] = COLUMNFLOATSIZE(width);
+			
+			columnIndexNames[columnIndex] = column;
+		} else {
+			width = 100;
+		}
 
 		return width;
 	}
@@ -1976,12 +2004,23 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (BOOL)_isGroupRow:(NSUInteger)rowIndex {
-	// Ask the delegate if the cell is fillable
+	// Ask the delegate if the cell is a group row
 	if ([[self dataSource] respondsToSelector:@selector(tableGrid:isGroupRow:)]) {
 		return [[self dataSource] tableGrid:self isGroupRow:rowIndex];
 	}
 	
 	return NO;
+}
+
+- (NSColor *)_tagColorForRow:(NSUInteger)rowIndex {
+	NSColor *returnColor = nil;
+	// Ask the delegate if the cell is a group row
+	if ([[self dataSource] respondsToSelector:@selector(tableGrid:tagColorForRow:)]) {
+		returnColor = [[self dataSource] tableGrid:self tagColorForRow:rowIndex];
+	}
+	
+	return returnColor;
+
 }
 
 - (MBSortDirection)_sortDirectionForColumn:(NSUInteger)columnIndex {

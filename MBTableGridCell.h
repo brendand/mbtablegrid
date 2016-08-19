@@ -35,7 +35,8 @@
 }
 
 @property (nonatomic, strong) NSImage *accessoryButtonImage;
-@property(nonatomic, assign) BOOL editWithPopupMenu;
+@property (nonatomic) BOOL editWithPopupMenu;
+@property (nonatomic) BOOL isGroupRow;
 
 - (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView withBackgroundColor:(NSColor *)backgroundColor;
 

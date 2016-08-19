@@ -40,10 +40,19 @@
 	return [[NSAttributedString alloc] initWithString:self.title attributes:attributes];
 }
 
+- (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView withBackgroundColor:(NSColor *)backgroundColor {
+	
+	[backgroundColor set];
+	NSRectFill(cellFrame);
+	
+	cellFrame.size.width -= 4;
+	[self drawWithFrame:cellFrame inView:controlView];
+}
+
 - (void)drawInteriorWithFrame:(NSRect)cellFrame inView:(NSView *)controlView
 {
 	static CGFloat TEXT_PADDING = 6;
-	static CGFloat POPUP_ARROWS_PADDING = 15;
+	static CGFloat POPUP_ARROWS_PADDING = 12;
 	NSRect textFrame;
 	CGSize stringSize = self.attributedTitle.size;
 	textFrame = NSMakeRect(cellFrame.origin.x + TEXT_PADDING, cellFrame.origin.y + (cellFrame.size.height - stringSize.height)/2, cellFrame.size.width - TEXT_PADDING - POPUP_ARROWS_PADDING, stringSize.height);

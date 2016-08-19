@@ -53,6 +53,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 - (void)_setStickyColumn:(MBTableGridEdge)stickyColumn row:(MBTableGridEdge)stickyRow;
 - (float)_widthForColumn:(NSUInteger)columnIndex;
 - (id)_backgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+- (id)_textColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (MBTableGridEdge)_stickyColumn;
 - (MBTableGridEdge)_stickyRow;
 - (void)_userDidEnterInvalidStringInColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex errorDescription:(NSString *)errorDescription;
@@ -113,8 +114,8 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		[_defaultCell setLineBreakMode:NSLineBreakByTruncatingTail];
 		
 		_groupRowColor = [NSColor colorWithCalibratedWhite:0.900 alpha:1.000];
-		_groupRowFont = [NSFont boldSystemFontOfSize:[NSFont systemFontSize]];
-		_groupRowTextColor = [NSColor colorWithCalibratedWhite:0.400 alpha:1.000];
+		_groupRowFont = [NSFont boldSystemFontOfSize:[NSFont systemFontSizeForControlSize:NSRegularControlSize]];
+		_groupRowTextColor = [NSColor colorWithCalibratedRed:0.031 green:0.239 blue:0.486 alpha:1.000];
 		
 		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(mylistener:) name:@"NSMenuDidChangeItemNotification" object:self];
 	}
@@ -208,9 +209,12 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 			_defaultCell.font = _groupRowFont;
 			_defaultCell.textColor = _groupRowTextColor;
 			_defaultCell.objectValue = objectValue;
+			_defaultCell.isGroupRow = YES;
 			[_defaultCell drawWithFrame:rowFrame inView:self withBackgroundColor:_groupRowColor];
 			
 		} else {
+			
+			_defaultCell.isGroupRow = NO;
 			
 			column = firstColumn;
 			while (column <= lastColumn) {
@@ -245,13 +249,13 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 					}
 					
 					if ([_cell isKindOfClass:[MBPopupButtonCell class]]) {
-						if (objectValue) {
-							MBPopupButtonCell *cell = (MBPopupButtonCell *)_cell;
-							NSInteger index = [cell indexOfItemWithTitle:objectValue];
-							[_cell setObjectValue:@(index)];
-						}
-					} else {
 						[_cell setObjectValue:objectValue];
+					} else {
+						if ([_cell isKindOfClass:[MBImageCell class]] && ![objectValue isKindOfClass:[NSImage class]]) {
+							[_cell setObjectValue:nil];
+						} else {
+							[_cell setObjectValue:objectValue];
+						}
 					}
 					
 					if ([_cell isKindOfClass:[MBPopupButtonCell class]]) {
@@ -276,12 +280,23 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 						
 						[cell drawWithFrame:cellFrame inView:[self tableGrid] withBackgroundColor:backgroundColor];// Draw background color
 						
+					} else if ([_cell isKindOfClass:[MBButtonCell class]]) {
+						
+						MBButtonCell *cell = (MBButtonCell *)_cell;
+
+						[cell drawWithFrame:cellFrame inView:self withBackgroundColor:backgroundColor];// Draw background color
+					
 					} else {
 						
 						MBTableGridCell *cell = (MBTableGridCell *)_cell;
 						
-						cell.accessoryButtonImage = [[self tableGrid] _accessoryButtonImageForColumn:column row:row];
+						NSColor *textColor = [[self tableGrid] _textColorForColumn:column row:row] ?: [NSColor blackColor];
 						
+						[cell setTextColor:textColor];
+						
+						cell.accessoryButtonImage = [[self tableGrid] _accessoryButtonImageForColumn:column row:row];
+					
+
 						[cell drawWithFrame:cellFrame inView:self withBackgroundColor:backgroundColor];// Draw background color
 						
 					}
@@ -526,14 +541,16 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 			
 			// Set the sticky edges
 			[[self tableGrid] _setStickyColumn:stickyColumnEdge row:stickyRowEdge];
-		// First click on a cell without shift key modifier
+			// First click on a cell without shift key modifier
 		} else {
 			// No modifier keys, so change the selection
-			[self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndex:mouseDownColumn];
-			if (![[self tableGrid].selectedRowIndexes containsIndex:mouseDownRow] || self.tableGrid.selectedRowIndexes.count > 1) {
-				[self tableGrid].selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:mouseDownRow];
+			if (mouseDownColumn != NSNotFound) {
+				[self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndex:mouseDownColumn];
+				if (![[self tableGrid].selectedRowIndexes containsIndex:mouseDownRow] || self.tableGrid.selectedRowIndexes.count > 1) {
+					[self tableGrid].selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:mouseDownRow];
+				}
+				[[self tableGrid] _setStickyColumn:MBTableGridLeftEdge row:MBTableGridTopEdge];
 			}
-			[[self tableGrid] _setStickyColumn:MBTableGridLeftEdge row:MBTableGridTopEdge];
 		}
     // Edit cells on double click if they don't already edit on first click
 	} else if (theEvent.clickCount == 2 && !cellEditsOnFirstClick && ![cell isKindOfClass:[MBLevelIndicatorCell class]]) {
@@ -551,7 +568,10 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		}
 	}
 
-	[self setNeedsDisplay:YES];
+//	[self setNeedsDisplay:YES];
+	NSRect cellFrame = [[self tableGrid] frameOfCellAtColumn:mouseDownColumn row:mouseDownRow];
+	[[self tableGrid] setNeedsDisplayInRect:cellFrame];
+
 }
 
 - (void)mouseDragged:(NSEvent *)theEvent
@@ -723,7 +743,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 			fillTrackingRect.size.height = self.frame.size.height;
 			NSRect topFillTrackingRect, bottomFillTrackingRect;
 			
-			NSDivideRect(fillTrackingRect, &topFillTrackingRect, &bottomFillTrackingRect, selectionRect.origin.y + (selectionRect.size.height / 2.0), CGRectMinYEdge);
+			NSDivideRect(fillTrackingRect, &topFillTrackingRect, &bottomFillTrackingRect, selectionRect.origin.y + (selectionRect.size.height / 2.0), NSMinYEdge);
 			
 			[self addTrackingArea:[[NSTrackingArea alloc] initWithRect:topFillTrackingRect options:NSTrackingMouseEnteredAndExited | NSTrackingActiveInKeyWindow owner:self userInfo:@{MBTableGridTrackingPartKey : @(MBTableGridTrackingPartFillTop)}]];
 			[self addTrackingArea:[[NSTrackingArea alloc] initWithRect:bottomFillTrackingRect options:NSTrackingMouseEnteredAndExited | NSTrackingActiveInKeyWindow owner:self userInfo:@{MBTableGridTrackingPartKey : @(MBTableGridTrackingPartFillBottom)}]];
@@ -961,23 +981,29 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		NSMenu *menu = selectedCell.menu;
 		menu.delegate = self;
 		
+		NSInteger itemIndex = 0;
+		NSMenuItem *selectedItem = nil;
+		
+		[popupCell selectItemWithObjectValue:currentValue];
+
 		for (NSMenuItem *item in menu.itemArray) {
 			item.action = @selector(cellPopupMenuItemSelected:);
 			item.target = self;
 
-			if ([item.title isEqualToString:currentValue])
-			{
-				[popupCell selectItem:item];
+			if ([item.title isEqualToString:currentValue]) {
+				selectedItem = item;
 			}
+			itemIndex++;
 		}
 
-		[selectedCell.menu popUpMenuPositioningItem:popupCell.selectedItem atLocation:cellFrame.origin inView:self];
+		[selectedCell.menu popUpMenuPositioningItem:selectedItem atLocation:cellFrame.origin inView:self];
 		
 	} else {
 		NSText *editor = [[self window] fieldEditor:YES forObject:self];
 		editor.delegate = self;
 		
 		cellFrame = NSInsetRect(cellFrame, kCELL_EDIT_HORIZONTAL_PADDING, 0);
+		cellFrame.origin.y += 1;
 		[selectedCell editWithFrame:cellFrame inView:self editor:editor delegate:self event:nil];
 		
 		
@@ -988,7 +1014,11 @@ NSString * const MBTableGridTrackingPartKey = @"part";
         }
 		
 		if (currentValue) {
-			editor.string = currentValue;
+			if ([currentValue isKindOfClass:[NSString class]]) {
+				editor.string = currentValue;
+			} else {
+				editor.string = [currentValue stringValue];
+			}
 		} else {
 			editor.string = @"";
 		}
@@ -997,7 +1027,8 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 
 - (void)cellPopupMenuItemSelected:(NSMenuItem *)menuItem {
 	MBPopupButtonCell *cell = (MBPopupButtonCell *)[[self tableGrid] _cellForColumn:editedColumn];
-	[cell selectItem:menuItem];
+//	[cell selectItem:menuItem];
+	[cell selectItemWithObjectValue:menuItem.title];
 
 	[[self tableGrid] _setObjectValue:menuItem.title forColumn:editedColumn row:editedRow undoTitle:@"Menu Choice"];
 	

@@ -17,6 +17,8 @@
 	if (self)
 	{
 		[self setBackgroundColor:[NSColor clearColor]];
+		self.lineBreakMode = NSLineBreakByTruncatingTail;
+		_arrowImage = [NSImage imageNamed:@"popup-indicator.pdf"];
 		return self;
 	}
 	
@@ -33,9 +35,18 @@
 
 - (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView {
 	NSRect popupFrame = cellFrame;
-	popupFrame.size.width -= 4;
+//	popupFrame.size.width -= 4;
+//	popupFrame.origin.y -= 1;
 	
-	[super drawWithFrame:popupFrame inView:controlView];
+//	[super drawWithFrame:popupFrame inView:controlView];
+	
+	[_arrowImage drawInRect:NSMakeRect(popupFrame.origin.x + popupFrame.size.width - 13, popupFrame.origin.y + 4, 7, 11)
+				   fromRect:NSMakeRect(0.0, 0.0, _arrowImage.size.width, _arrowImage.size.height)
+				  operation:NSCompositeSourceOver
+				   fraction:1.0
+			 respectFlipped:YES
+					  hints:nil];
+
 	
 	NSColor *borderColor = [NSColor colorWithDeviceWhite:0.83 alpha:1.0];
 	[borderColor set];
@@ -47,8 +58,11 @@
 	// Draw the bottom border
 	NSRect bottomLine = NSMakeRect(NSMinX(cellFrame), NSMaxY(cellFrame)-1.0, NSWidth(cellFrame), 1.0);
 	NSRectFill(bottomLine);
-		
-//	[self drawInteriorWithFrame:cellFrame inView:controlView];
+	
+	popupFrame.size.width -= 16 + 6;
+	popupFrame.origin.x += 4;
+	
+	[self drawInteriorWithFrame:popupFrame inView:controlView];
 }
 
 - (NSColor *)highlightColorWithFrame:(NSRect)cellFrame inView:(NSView *)controlView
@@ -57,5 +71,12 @@
 	return nil;
 }
 
+- (NSInteger)indexOfItemWithTitle:(NSString *)aTitle {
+	return [self indexOfItemWithObjectValue:aTitle];
+}
+
+- (void)synchronizeTitleAndSelectedItem {
+	return;
+}
 
 @end
