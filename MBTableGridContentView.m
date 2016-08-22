@@ -413,6 +413,8 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		[borderPath setLineWidth:2.0];
 		[borderPath stroke];
 	}
+    
+    [self updateTrackingAreas];
 }
 
 - (void)updateCell:(id)sender {
@@ -571,7 +573,6 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 //	[self setNeedsDisplay:YES];
 	NSRect cellFrame = [[self tableGrid] frameOfCellAtColumn:mouseDownColumn row:mouseDownRow];
 	[[self tableGrid] setNeedsDisplayInRect:cellFrame];
-
 }
 
 - (void)mouseDragged:(NSEvent *)theEvent
@@ -698,6 +699,22 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 
 #pragma mark Cursor Rects
 
+- (NSRect)selectionRect
+{
+    NSIndexSet *selectedColumns = [self tableGrid].selectedColumnIndexes;
+    NSIndexSet *selectedRows = [self tableGrid].selectedRowIndexes;
+    
+    NSRect selectionTopLeft = [self frameOfCellAtColumn:[selectedColumns firstIndex] row:[selectedRows firstIndex]];
+    NSRect selectionBottomRight = [self frameOfCellAtColumn:[selectedColumns lastIndex] row:[selectedRows lastIndex]];
+    
+    NSRect selectionRect;
+    selectionRect.origin = selectionTopLeft.origin;
+    selectionRect.size.width = NSMaxX(selectionBottomRight)-selectionTopLeft.origin.x;
+    selectionRect.size.height = NSMaxY(selectionBottomRight)-selectionTopLeft.origin.y;
+    
+    return selectionRect;
+}
+
 - (void)resetCursorRects
 {
     //NSLog(@"%s - %f %f %f %f", __func__, grabHandleRect.origin.x, grabHandleRect.origin.y, grabHandleRect.size.width, grabHandleRect.size.height);
@@ -705,14 +722,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 	
 	NSIndexSet *selectedColumns = [self tableGrid].selectedColumnIndexes;
 	NSIndexSet *selectedRows = [self tableGrid].selectedRowIndexes;
-
-	NSRect selectionTopLeft = [self frameOfCellAtColumn:[selectedColumns firstIndex] row:[selectedRows firstIndex]];
-	NSRect selectionBottomRight = [self frameOfCellAtColumn:[selectedColumns lastIndex] row:[selectedRows lastIndex]];
-	
-	NSRect selectionRect;
-	selectionRect.origin = selectionTopLeft.origin;
-	selectionRect.size.width = NSMaxX(selectionBottomRight)-selectionTopLeft.origin.x;
-	selectionRect.size.height = NSMaxY(selectionBottomRight)-selectionTopLeft.origin.y;
+	NSRect selectionRect = [self selectionRect];
 	
 	if (!isFilling) {
 		[self addCursorRect:selectionRect cursor:[NSCursor arrowCursor]];
@@ -727,28 +737,35 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 	} else {
 		[self addCursorRect:[self visibleRect] cursor:[self _cellFillCursor]];
 	}
-	
-    // Update tracking areas here, to leverage the selection variables
+}
+
+- (void)updateTrackingAreas {
+    [super updateTrackingAreas];
+    
+    NSIndexSet *selectedColumns = [self tableGrid].selectedColumnIndexes;
+    NSIndexSet *selectedRows = [self tableGrid].selectedRowIndexes;
+    NSRect selectionRect = [self selectionRect];
+    
     for (NSTrackingArea *trackingArea in self.trackingAreas) {
         [self removeTrackingArea:trackingArea];
     }
-	
-	if (selectedColumns.count == 1) {
-		
-		BOOL canFill = [[self tableGrid] _canFillCellAtColumn:[selectedColumns firstIndex] row:[selectedRows firstIndex]];
-		
-		if (canFill) {
-			
-			NSRect fillTrackingRect = [self rectOfColumn:[selectedColumns firstIndex]];
-			fillTrackingRect.size.height = self.frame.size.height;
-			NSRect topFillTrackingRect, bottomFillTrackingRect;
-			
-			NSDivideRect(fillTrackingRect, &topFillTrackingRect, &bottomFillTrackingRect, selectionRect.origin.y + (selectionRect.size.height / 2.0), NSMinYEdge);
-			
-			[self addTrackingArea:[[NSTrackingArea alloc] initWithRect:topFillTrackingRect options:NSTrackingMouseEnteredAndExited | NSTrackingActiveInKeyWindow owner:self userInfo:@{MBTableGridTrackingPartKey : @(MBTableGridTrackingPartFillTop)}]];
-			[self addTrackingArea:[[NSTrackingArea alloc] initWithRect:bottomFillTrackingRect options:NSTrackingMouseEnteredAndExited | NSTrackingActiveInKeyWindow owner:self userInfo:@{MBTableGridTrackingPartKey : @(MBTableGridTrackingPartFillBottom)}]];
-		}
-	}
+    
+    if (selectedColumns.count == 1) {
+        
+        BOOL canFill = [[self tableGrid] _canFillCellAtColumn:[selectedColumns firstIndex] row:[selectedRows firstIndex]];
+        
+        if (canFill) {
+            
+            NSRect fillTrackingRect = [self rectOfColumn:[selectedColumns firstIndex]];
+            fillTrackingRect.size.height = self.frame.size.height;
+            NSRect topFillTrackingRect, bottomFillTrackingRect;
+            
+            NSDivideRect(fillTrackingRect, &topFillTrackingRect, &bottomFillTrackingRect, selectionRect.origin.y + (selectionRect.size.height / 2.0), NSMinYEdge);
+            
+            [self addTrackingArea:[[NSTrackingArea alloc] initWithRect:topFillTrackingRect options:NSTrackingMouseEnteredAndExited | NSTrackingActiveInKeyWindow owner:self userInfo:@{MBTableGridTrackingPartKey : @(MBTableGridTrackingPartFillTop)}]];
+            [self addTrackingArea:[[NSTrackingArea alloc] initWithRect:bottomFillTrackingRect options:NSTrackingMouseEnteredAndExited | NSTrackingActiveInKeyWindow owner:self userInfo:@{MBTableGridTrackingPartKey : @(MBTableGridTrackingPartFillBottom)}]];
+        }
+    }
 }
 
 #pragma mark -

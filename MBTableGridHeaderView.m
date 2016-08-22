@@ -75,20 +75,6 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
     
 	if (self.orientation == MBTableHeaderHorizontalOrientation) {
         
-        // Remove all tracking areas
-        if (trackingAreas) {
-         
-            for (NSTrackingArea *trackingArea in trackingAreas) {
-                
-                [self removeTrackingArea:trackingArea];
-                
-            }
-            
-        }
-
-        // reset tracking array
-        trackingAreas = [NSMutableArray array];
-        
 		// Draw the column headers
 		NSUInteger numberOfColumns = [self tableGrid].numberOfColumns;
 		[headerCell setOrientation:self.orientation];
@@ -129,14 +115,6 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 				[headerCell drawWithFrame:headerRect inView:self];
                 
 			}
-			
-			// Create new tracking area for resizing columns
-			NSRect resizeRect = NSMakeRect(NSMinX(headerRect) + NSWidth(headerRect) - 2, NSMinY(headerRect), 5, NSHeight(headerRect));
-			NSTrackingArea *resizeTrackingArea = [[NSTrackingArea alloc] initWithRect:resizeRect options:(NSTrackingMouseEnteredAndExited | NSTrackingActiveAlways) owner:self userInfo:nil];
-			
-			// keep track of tracking areas and add tracking to view
-			[trackingAreas addObject:resizeTrackingArea];
-			[self addTrackingArea:resizeTrackingArea];
 			
 			column++;
 		}
@@ -188,6 +166,40 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 - (BOOL)isFlipped
 {
 	return YES;
+}
+
+- (void)updateTrackingAreas
+{
+    [super updateTrackingAreas];
+    
+    if (self.orientation == MBTableHeaderHorizontalOrientation) {
+        // Remove all tracking areas
+        if (trackingAreas) {
+            for (NSTrackingArea *trackingArea in trackingAreas) {
+                [self removeTrackingArea:trackingArea];
+            }
+        }
+        
+        // reset tracking array
+        trackingAreas = [NSMutableArray array];
+        
+        NSUInteger numberOfColumns = [self tableGrid].numberOfColumns;
+        NSUInteger column = 0;
+        
+        while (column < numberOfColumns) {
+            NSRect headerRect = [self headerRectOfColumn:column];
+            
+            // Create new tracking area for resizing columns
+            NSRect resizeRect = NSMakeRect(NSMinX(headerRect) + NSWidth(headerRect) - 2, NSMinY(headerRect), 5, NSHeight(headerRect));
+            NSTrackingArea *resizeTrackingArea = [[NSTrackingArea alloc] initWithRect:resizeRect options:(NSTrackingMouseEnteredAndExited | NSTrackingActiveAlways) owner:self userInfo:nil];
+            
+            // keep track of tracking areas and add tracking to view
+            [trackingAreas addObject:resizeTrackingArea];
+            [self addTrackingArea:resizeTrackingArea];
+            
+            column++;
+        }
+    }
 }
 
 - (void)mouseDown:(NSEvent *)theEvent
