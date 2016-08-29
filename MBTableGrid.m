@@ -86,6 +86,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 - (void)_setFooterValue:(id)value forColumn:(NSUInteger)columnIndex;
 - (BOOL)_isGroupRow:(NSUInteger)rowIndex;
 - (MBSortDirection)_sortDirectionForColumn:(NSUInteger)columnIndex;
+- (void)_fillInColumn:(NSUInteger)column fromRow:(NSUInteger)row numberOfRowsWhenStarting:(NSUInteger)numberOfRowsWhenStartingFilling;
 @end
 
 @interface MBTableGrid (DragAndDrop)
@@ -901,6 +902,23 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		
 		[self.contentView setNeedsDisplay:YES];
 	}
+}
+
+- (void)fillDown:(id)sender {
+	NSInteger row = self.selectedRowIndexes.firstIndex;
+	NSInteger column = self.selectedColumnIndexes.firstIndex;
+	
+	[self _fillInColumn:column fromRow:row numberOfRowsWhenStarting:self.numberOfRows];
+	[self setNeedsDisplay:YES];
+}
+
+- (void)fillUp:(id)sender {
+	NSInteger row = self.selectedRowIndexes.lastIndex;
+	NSInteger column = self.selectedColumnIndexes.firstIndex;
+	
+	[self _fillInColumn:column fromRow:row numberOfRowsWhenStarting:self.numberOfRows];
+	
+	[self setNeedsDisplay:YES];
 }
 
 - (void)scrollToRow:(NSUInteger)rowIndex animate:(BOOL)shouldAnimate {

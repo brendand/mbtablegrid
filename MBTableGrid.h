@@ -230,6 +230,18 @@ typedef enum {
 - (void)moveUp:(id)sender;
 
 /**
+ * @brief		Initiates the fill down operation
+ *
+ */
+- (void)fillDown:(id)sender;
+
+/**
+ * @brief		Initiates the fill up operation
+ *
+ */
+- (void)fillUp:(id)sender;
+
+/**
  * @}
  */
 
