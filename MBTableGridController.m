@@ -368,6 +368,23 @@ NSString * const ColumnText4 = @"text4";
         return [NSColor colorWithDeviceWhite:0.96 alpha:1.000];
 }
 
+- (BOOL)tableGrid:(MBTableGrid *)aTableGrid isGroupRow:(NSUInteger)rowIndex {
+	if (rowIndex == 0 || rowIndex == 5) {
+		return YES;
+	}
+	return NO;
+}
+
+- (MBSortDirection)tableGrid:(MBTableGrid *)aTableGrid sortDirectionForColumn:(NSUInteger)columnIndex {
+	if (columnIndex == 1) {
+		return MBSortAscending;
+	} else if (columnIndex == 3) {
+		return MBSortDescending;
+	} else {
+		return MBSortUndetermined;
+	}
+}
+
 #pragma mark Footer
 
 - (void)addItemToMenu:(NSMenu *)menu withTitle:(NSString *)title;

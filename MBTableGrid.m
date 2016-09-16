@@ -460,6 +460,18 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
         [frozenColumnFooterView setNeedsDisplayInRect:rectOfResizedAndVisibleRightwardFrozenFooters];
     }
     
+    // Update the shadow views' sizes
+    NSRect columnShadowFrame = [columnShadowView frame];
+    columnShadowFrame.size.width = columnHeaderView.frame.size.width;
+    columnShadowView.frame = columnShadowFrame;
+    
+    NSRect rowShadowFrame = [rowShadowView frame];
+    rowShadowFrame.origin.x = MBTableGridRowHeaderWidth + frozenContentView.bounds.size.width;
+    rowShadowFrame.size.height = rowHeaderView.bounds.size.height;
+    rowShadowView.frame = rowShadowFrame;
+    
+    [self updateShadows];
+    
     return offset;
 }
 
@@ -916,7 +928,6 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
         [self scrollForFrozenColumnsFromColumn:column right:YES];
         
 		if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
-            cellRect.origin.x = cellRect.origin.x - self.contentView.visibleRect.size.width + cellRect.size.width;
 			cellRect.origin.y = self.contentView.visibleRect.origin.y;
 			[self scrollToArea:cellRect animate:NO];
 		} else {
@@ -968,7 +979,6 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
         [self scrollForFrozenColumnsFromColumn:lastColumn right:YES];
         
         if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
-			cellRect.origin.x = cellRect.origin.x - self.contentView.visibleRect.size.width + cellRect.size.width;
 			cellRect.origin.y = self.contentView.visibleRect.origin.y;
 			[self scrollToArea:cellRect animate:NO];
 		}
