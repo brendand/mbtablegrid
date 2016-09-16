@@ -33,7 +33,7 @@ typedef enum : NSUInteger {
 	MBSortUndetermined
 } MBSortDirection;
 
-@class MBTableGridHeaderView, MBTableGridFooterView, MBTableGridHeaderCell, MBTableGridContentView;
+@class MBTableGridHeaderView, MBTableGridFooterView, MBTableGridHeaderCell, MBTableGridContentView, MBTableGridShadowView;
 @protocol MBTableGridDelegate, MBTableGridDataSource;
 
 /* Notifications */
@@ -126,17 +126,24 @@ typedef enum {
 	
 	/* Headers */
 	NSScrollView *columnHeaderScrollView;
-	MBTableGridHeaderView *columnHeaderView;
+    MBTableGridHeaderView *columnHeaderView;
+	MBTableGridHeaderView *frozenColumnHeaderView;
 	NSScrollView *rowHeaderScrollView;
 	MBTableGridHeaderView *rowHeaderView;
+    
+    /* Shadows */
+    MBTableGridShadowView *columnShadowView;
+    MBTableGridShadowView *rowShadowView;
 	
 	/* Footer */
 	NSScrollView *columnFooterScrollView;
 	MBTableGridFooterView *columnFooterView;
+    MBTableGridFooterView *frozenColumnFooterView;
 	
 	/* Content */
 	NSScrollView *contentScrollView;
-	MBTableGridContentView *contentView;
+    MBTableGridContentView *contentView;
+    MBTableGridContentView *frozenContentView;
 		
 	/* Behavior */
 	BOOL shouldOverrideModifiers;
@@ -373,7 +380,6 @@ typedef enum {
  */
 - (NSImage *)indicatorImageInColumn:(NSUInteger)columnIndex;
 
-
 /**
  * @}
  */
@@ -419,6 +425,25 @@ typedef enum {
  */
 @property (nonatomic) BOOL footerHidden;
 
+/**
+ * @brief		Returns the number of frozen columns in the receiver.
+ *
+ * @return		The number of frozen columns in the receiver.
+ *
+ * @see			freezeColumns
+ */
+
+@property (nonatomic) NSUInteger numberOfFrozenColumns;
+
+/**
+ * @brief		Returns whether or not some columns are frozen.
+ *
+ * @return		Whether or not some columns are frozen.
+ *
+ * @see			numberOfFrozenColumns
+ */
+
+@property (nonatomic) BOOL freezeColumns;
 
 /**
  * @}
@@ -617,6 +642,28 @@ typedef enum {
 
 /**
  * @brief		Returns the \c MBTableGridHeaderView object used
+ *				to draw headers over frozen columns.
+ *
+ * @return		The \c MBTableGridHeaderView object used to draw
+ *				frozen column headers.
+ *
+ * @see			rowHeaderView
+ */
+- (MBTableGridHeaderView *)frozenColumnHeaderView;
+
+/**
+ * @brief		Returns the \c MBTableGridFooterView object used
+ *				to draw footers below frozen columns.
+ *
+ * @return		The \c MBTableGridFooterView object used to draw
+ *				frozen column footers.
+ *
+ * @see			frozenColumnHeaderView
+ */
+- (MBTableGridFooterView *)frozenColumnFooterView;
+
+/**
+ * @brief		Returns the \c MBTableGridHeaderView object used
  *				to draw headers beside rows.
  *
  * @return		The \c MBTableGridHeaderView object used to draw
@@ -625,6 +672,28 @@ typedef enum {
  * @see			columnHeaderView
  */
 - (MBTableGridHeaderView *)rowHeaderView;
+
+/**
+ * @brief		Returns the \c MBTableGridShadowView object used
+ *				to draw a shadow next to the column header or frozen columns.
+ *
+ * @return		The \c MBTableGridShadowView object used to draw
+ *				a shadow.
+ *
+ * @see			rowShadowView
+ */
+- (MBTableGridShadowView *)columnShadowView;
+
+/**
+ * @brief		Returns the \c MBTableGridShadowView object used
+ *				to draw a shadow below the row header.
+ *
+ * @return		The \c MBTableGridShadowView object used to draw
+ *				a shadow.
+ *
+ * @see			columnShadowView
+ */
+- (MBTableGridShadowView *)rowShadowView;
 
 /**
  * @brief		Returns the receiver's content view.
@@ -636,6 +705,37 @@ typedef enum {
  * @return		The receiver's content view.
  */
 - (MBTableGridContentView *)contentView;
+
+/**
+ * @brief		Returns the receiver's frozen content view.
+ *
+ * @details		An \c MBTableGrid object uses its content view to
+ *				draw the individual cells. It is enclosed in a
+ *				scroll view to allow for scrolling.  This one
+ *				is used for any frozen columns.
+ *
+ * @return		The receiver's frozen content view.
+ */
+- (MBTableGridContentView *)frozenContentView;
+
+/**
+ * @brief		Returns whether or not a column is frozen.
+ *
+ * @details		A column is frozen if frozen columns are enabled via
+ *              the freezeColumns property, and the column is within
+ *              the numberOfFrozenColumns.
+ *
+ * @return		YES if the column is frozen, NO if not.
+ */
+- (BOOL)isFrozenColumn:(NSUInteger)column;
+
+/**
+ * @brief		Scrolls between frozen and unfrozen columns, if needed.
+ *
+ * @details		If moving between a frozen column and an unfrozen one,
+ *              this will scroll to reveal the adjacent column, as needed.
+ */
+- (void)scrollForFrozenColumnsFromColumn:(NSUInteger)fromColumn right:(BOOL)right;
 
 /**
  * @}
@@ -797,6 +897,17 @@ typedef enum {
  * @return		The background color for the specified cell of the view.
  */
 - (NSColor *)tableGrid:(MBTableGrid *)aTableGrid backgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+
+/**
+ * @brief		Returns the frozen background color for the specified column and row.
+ *
+ * @param		aTableGrid		The table grid that sent the message.
+ * @param		columnIndex		A column in \c aTableGrid.
+ * @param		rowIndex		A row in \c aTableGrid.
+ *
+ * @return		The frozen background color for the specified cell of the view.
+ */
+- (NSColor *)tableGrid:(MBTableGrid *)aTableGrid frozenBackgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 
 @optional
 

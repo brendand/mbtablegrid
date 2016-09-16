@@ -38,8 +38,11 @@
 	NSColor *topColor = [NSColor colorWithDeviceWhite:0.95 alpha:1.0];
 	NSColor *sideColor = [NSColor colorWithDeviceWhite:1.0 alpha:0.4];
 	NSColor *borderColor = [NSColor colorWithDeviceWhite:0.8 alpha:1.0];
-		
+    
 	if(self.orientation == MBTableHeaderHorizontalOrientation) {
+        [[NSColor whiteColor] set];
+        NSRectFill(cellFrame);
+        
 		// Draw the side bevels
 		NSRect sideLine = NSMakeRect(NSMinX(cellFrameRect), NSMinY(cellFrameRect), 1.0, NSHeight(cellFrameRect));
 		[sideColor set];
@@ -57,6 +60,9 @@
 		NSRectFill(bottomLine);
 		
 	} else if(self.orientation == MBTableHeaderVerticalOrientation) {
+        [[NSColor colorWithDeviceWhite:1.0 alpha:0.4] set];
+        NSRectFill(cellFrame);
+        
 		// Draw the top bevel line
 		NSRect topLine = NSMakeRect(NSMinX(cellFrameRect), NSMinY(cellFrameRect), NSWidth(cellFrameRect), 1.0);
 		[topColor set];

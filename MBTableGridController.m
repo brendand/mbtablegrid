@@ -96,6 +96,9 @@ NSString * const ColumnText4 = @"text4";
 	// Add 10 columns & rows
     [self tableGrid:tableGrid addColumns:10 shouldReload:NO];
     [self tableGrid:tableGrid addRows:5000 shouldReload:NO];
+    
+    [self tableGrid:tableGrid changeFrozenColumns:[defaults integerForKey:@"MBTableGrid Frozen Columns"] shouldReload:NO];
+    [self tableGrid:tableGrid freezeColumns:[defaults boolForKey:@"MBTableGrid Freeze Columns"] shouldReload:NO];
 	
 	[tableGrid setSortAscendingImage:[NSImage imageNamed:@"sort-asc"] sortDescendingImage:[NSImage imageNamed:@"sort-desc"] sortUndeterminedImage:nil];
 	
@@ -160,6 +163,19 @@ NSString * const ColumnText4 = @"text4";
     
     // return string
     return randomString;
+}
+
+- (BOOL)validateMenuItem:(NSMenuItem *)menuItem {
+    SEL action = menuItem.action;
+    BOOL enabled = YES;
+    
+    if (action == @selector(changeFrozenColumns:)) {
+        menuItem.state = menuItem.tag == tableGrid.numberOfFrozenColumns;
+    } else if (action == @selector(freezeColumns:)) {
+        menuItem.state = tableGrid.freezeColumns;
+    }
+    
+    return enabled;
 }
 
 #pragma mark -
@@ -343,6 +359,13 @@ NSString * const ColumnText4 = @"text4";
         return [NSColor colorWithDeviceWhite:0.950 alpha:1.000];
     else
         return nil;
+}
+
+-(NSColor *)tableGrid:(MBTableGrid *)aTableGrid frozenBackgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
+    if (rowIndex % 2)
+        return [NSColor colorWithDeviceWhite:0.9 alpha:1.000];
+    else
+        return [NSColor colorWithDeviceWhite:0.96 alpha:1.000];
 }
 
 #pragma mark Footer
@@ -712,6 +735,28 @@ NSString * const ColumnText4 = @"text4";
     return YES;
 }
 
+- (BOOL)tableGrid:(MBTableGrid *)aTableGrid changeFrozenColumns:(NSUInteger)numberOfColumns shouldReload:(BOOL)shouldReload;
+{
+    aTableGrid.numberOfFrozenColumns = numberOfColumns;
+    
+    if (shouldReload) {
+        [aTableGrid reloadData];
+    }
+    
+    return YES;
+}
+
+- (BOOL)tableGrid:(MBTableGrid *)aTableGrid freezeColumns:(BOOL)freezeColumns shouldReload:(BOOL)shouldReload;
+{
+    aTableGrid.freezeColumns = freezeColumns;
+    
+    if (shouldReload) {
+        [aTableGrid reloadData];
+    }
+    
+    return YES;
+}
+
 #pragma mark MBTableGridDelegate
 
 - (void)tableGridDidMoveRows:(NSNotification *)aNotification
@@ -813,14 +858,30 @@ NSString * const ColumnText4 = @"text4";
 #pragma mark -
 #pragma mark Subclass Methods
 
-- (IBAction)addColumn:(id)sender
-{
+- (IBAction)addColumn:(id)sender {
     [self tableGrid:tableGrid addColumns:1 shouldReload:YES];
 }
 
-- (IBAction)addRow:(id)sender
-{
+- (IBAction)addRow:(id)sender {
     [self tableGrid:tableGrid addRows:1 shouldReload:YES];
+}
+
+- (IBAction)changeFrozenColumns:(id)sender {
+    NSMenuItem *item = sender;
+    NSUInteger numberOfColumns = item.tag;
+    
+    [self tableGrid:tableGrid changeFrozenColumns:numberOfColumns shouldReload:YES];
+    
+    [[NSUserDefaults standardUserDefaults] setInteger:numberOfColumns forKey:@"MBTableGrid Frozen Columns"];
+}
+
+- (IBAction)freezeColumns:(id)sender {
+    NSMenuItem *item = sender;
+    BOOL freeze = !item.state;
+    
+    [self tableGrid:tableGrid freezeColumns:freeze shouldReload:YES];
+    
+    [[NSUserDefaults standardUserDefaults] setBool:freeze forKey:@"MBTableGrid Freeze Columns"];
 }
 
 @end

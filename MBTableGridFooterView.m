@@ -36,6 +36,12 @@
 - (void)_setFooterValue:(id)value forColumn:(NSUInteger)columnIndex;
 @end
 
+@interface MBTableGridFooterView ()
+
+@property (nonatomic, weak) MBTableGrid *cachedTableGrid;
+
+@end
+
 @implementation MBTableGridFooterView
 
 - (id)initWithFrame:(NSRect)frameRect
@@ -75,7 +81,12 @@
                 [_cell setObjectValue:objectValue];
             }
             
-            if ([_cell isKindOfClass:[MBFooterPopupButtonCell class]]) {
+            BOOL isFrozenColumn = self != [self tableGrid].frozenColumnFooterView && [[self tableGrid] isFrozenColumn:column];
+            
+            if (isFrozenColumn) {
+                [backgroundColor set];
+                NSRectFill(cellFrame);
+            } else if ([_cell isKindOfClass:[MBFooterPopupButtonCell class]]) {
                 
                 MBFooterPopupButtonCell *cell = (MBFooterPopupButtonCell *)_cell;
                 [cell drawWithFrame:cellFrame inView:self withBackgroundColor:backgroundColor];// Draw background color
@@ -100,17 +111,19 @@
             NSColor *sideColor = [NSColor colorWithDeviceWhite:1.0 alpha:0.4];
             NSColor *borderColor = [NSColor colorWithDeviceWhite:0.8 alpha:1.0];
             
-            // Draw the side bevels
-            NSRect sideLine = NSMakeRect(NSMinX(cellFrame), NSMinY(cellFrame), 1.0, NSHeight(cellFrame));
-            [sideColor set];
-            [[NSBezierPath bezierPathWithRect:sideLine] fill];
-            sideLine.origin.x = NSMaxX(cellFrame)-2.0;
-            [[NSBezierPath bezierPathWithRect:sideLine] fill];
-            
-            // Draw the right border
-            NSRect borderLine = NSMakeRect(NSMaxX(cellFrame)-1, NSMinY(cellFrame), 1.0, NSHeight(cellFrame));
-            [borderColor set];
-            NSRectFill(borderLine);
+            if (!isFrozenColumn) {
+                // Draw the side bevels
+                NSRect sideLine = NSMakeRect(NSMinX(cellFrame), NSMinY(cellFrame), 1.0, NSHeight(cellFrame));
+                [sideColor set];
+                [[NSBezierPath bezierPathWithRect:sideLine] fill];
+                sideLine.origin.x = NSMaxX(cellFrame)-2.0;
+                [[NSBezierPath bezierPathWithRect:sideLine] fill];
+                
+                // Draw the right border
+                NSRect borderLine = NSMakeRect(NSMaxX(cellFrame)-1, NSMinY(cellFrame), 1.0, NSHeight(cellFrame));
+                [borderColor set];
+                NSRectFill(borderLine);
+            }
             
             // Draw the bottom border
             NSRect bottomLine = NSMakeRect(NSMinX(cellFrame), NSMaxY(cellFrame)-1.0, NSWidth(cellFrame), 1.0);
@@ -216,7 +229,18 @@
 
 - (MBTableGrid *)tableGrid
 {
-	return (MBTableGrid *)[[self enclosingScrollView] superview];
+    if (!self.cachedTableGrid) {
+        NSScrollView *scrollView = self.enclosingScrollView;
+        
+        // Will be nil for the floating view:
+        if (!scrollView) {
+            scrollView = self.superview.superview;
+        }
+        
+        self.cachedTableGrid = scrollView.superview;
+    }
+    
+    return self.cachedTableGrid;
 }
 
 #pragma mark Layout Support

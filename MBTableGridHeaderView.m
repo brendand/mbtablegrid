@@ -45,6 +45,12 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 - (MBSortDirection)_sortDirectionForColumn:(NSUInteger)columnIndex;
 @end
 
+@interface MBTableGridHeaderView()
+
+@property (nonatomic, weak) MBTableGrid *cachedTableGrid;
+
+@end
+
 @implementation MBTableGridHeaderView
 
 @synthesize orientation;
@@ -72,7 +78,6 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 
 - (void)drawRect:(NSRect)rect
 {
-    
 	if (self.orientation == MBTableHeaderHorizontalOrientation) {
         
 		// Draw the column headers
@@ -112,7 +117,15 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 				if (stringValue) {
 					[headerCell setStringValue:stringValue];
 				}
-				[headerCell drawWithFrame:headerRect inView:self];
+                
+                BOOL isFrozenColumn = self != [self tableGrid].frozenColumnHeaderView && [[self tableGrid] isFrozenColumn:column];
+                
+                if (isFrozenColumn) {
+                    [[NSColor whiteColor] set];
+                    NSRectFill(headerRect);
+                } else {
+                    [headerCell drawWithFrame:headerRect inView:self];
+                }
                 
 			}
 			
@@ -160,7 +173,6 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 			row++;
 		}
 	}
-	
 }
 
 - (BOOL)isFlipped
@@ -488,7 +500,18 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 
 - (MBTableGrid *)tableGrid
 {
-	return (MBTableGrid *)[[self enclosingScrollView] superview];
+    if (!self.cachedTableGrid) {
+        NSScrollView *scrollView = self.enclosingScrollView;
+        
+        // Will be nil for the floating view:
+        if (!scrollView) {
+            scrollView = self.superview.superview;
+        }
+        
+        self.cachedTableGrid = scrollView.superview;
+    }
+    
+    return self.cachedTableGrid;
 }
 
 #pragma mark Layout Support

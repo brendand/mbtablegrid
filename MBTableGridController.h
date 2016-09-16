@@ -36,5 +36,7 @@
 
 - (IBAction)addColumn:(id)sender;
 - (IBAction)addRow:(id)sender;
+- (IBAction)changeFrozenColumns:(id)sender;
+- (IBAction)freezeColumns:(id)sender;
 
 @end

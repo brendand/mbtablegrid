@@ -53,6 +53,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 - (void)_setStickyColumn:(MBTableGridEdge)stickyColumn row:(MBTableGridEdge)stickyRow;
 - (float)_widthForColumn:(NSUInteger)columnIndex;
 - (id)_backgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+- (id)_frozenBackgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (id)_textColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (MBTableGridEdge)_stickyColumn;
 - (MBTableGridEdge)_stickyRow;
@@ -77,6 +78,13 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 - (void)_setDropColumn:(NSInteger)columnIndex;
 - (void)_setDropRow:(NSInteger)rowIndex;
 - (void)_timerAutoscrollCallback:(NSTimer *)aTimer;
+@end
+
+@interface MBTableGridContentView ()
+
+@property (nonatomic, weak) MBTableGrid *cachedTableGrid;
+@property (nonatomic, readonly) BOOL frozen;
+
 @end
 
 @implementation MBTableGridContentView
@@ -158,7 +166,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
     NSIndexSet *selectedRows = [[self tableGrid] selectedRowIndexes];
 	NSUInteger numberOfColumns = [self tableGrid].numberOfColumns;
 	NSUInteger numberOfRows = [self tableGrid].numberOfRows;
-	
+    
 	if (numberOfRows == 0 || numberOfColumns == 0) {
 		return;
 	}
@@ -196,8 +204,21 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 			break;
 		}
 		row++;
-	}	
+	}
+    
+    NSRect selectionInsetRect = NSZeroRect;
+    NSBezierPath *selectionPath = nil;
 	
+    if([selectedColumns count] && [selectedRows count] && [self tableGrid].numberOfColumns > 0 && [self tableGrid].numberOfRows > 0) {
+        selectionInsetRect = NSInsetRect(self.selectionRect, 1, 1);
+        selectionPath = [NSBezierPath bezierPathWithRect:selectionInsetRect];
+        NSAffineTransform *translate = [NSAffineTransform transform];
+        [translate translateXBy:-0.5 yBy:-0.5];
+        [selectionPath transformUsingAffineTransform:translate];
+        [[NSColor whiteColor] set];
+        [selectionPath fill];
+    }
+    
 	row = firstRow;
 	while (row <= lastRow) {
 
@@ -233,6 +254,10 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 					
 					NSColor *backgroundColor = [[self tableGrid] _backgroundColorForColumn:column row:row] ?: [NSColor whiteColor];
 					
+                    if ([[self tableGrid] isFrozenColumn:column]) {
+                        backgroundColor = [[self tableGrid] _frozenBackgroundColorForColumn:column row:row] ?: [NSColor colorWithCalibratedWhite:0.97 alpha:1.0];
+                    }
+                    
 					if (!_cell) {
 						_cell = _defaultCell;
 					}
@@ -241,14 +266,17 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 					[_cell setFormatter:[[self tableGrid] _formatterForColumn:column]];
 					
 					id objectValue = nil;
+                    BOOL isFrozenColumn = self != [self tableGrid].frozenContentView && [[self tableGrid] isFrozenColumn:column];
 					
-					if (isFilling && [selectedColumns containsIndex:column] && [selectedRows containsIndex:row]) {
+                    if (isFilling && [selectedColumns containsIndex:column] && [selectedRows containsIndex:row]) {
 						objectValue = [[self tableGrid] _objectValueForColumn:mouseDownColumn row:mouseDownRow];
 					} else {
 						objectValue = [[self tableGrid] _objectValueForColumn:column row:row];
 					}
 					
-					if ([_cell isKindOfClass:[MBPopupButtonCell class]]) {
+                    if (isFrozenColumn) {
+                        [_cell setObjectValue:nil];
+                    } else if ([_cell isKindOfClass:[MBPopupButtonCell class]]) {
 						[_cell setObjectValue:objectValue];
 					} else {
 						if ([_cell isKindOfClass:[MBImageCell class]] && ![objectValue isKindOfClass:[NSImage class]]) {
@@ -258,7 +286,10 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 						}
 					}
 					
-					if ([_cell isKindOfClass:[MBPopupButtonCell class]]) {
+                    if (isFrozenColumn) {
+                        [[NSColor whiteColor] set];
+                        NSRectFill(cellFrame);
+                    } else if ([_cell isKindOfClass:[MBPopupButtonCell class]]) {
 						
 						MBPopupButtonCell *cell = (MBPopupButtonCell *)_cell;
 						[cell drawWithFrame:cellFrame inView:self withBackgroundColor:backgroundColor];// Draw background color
@@ -309,20 +340,6 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 	
 	// Draw the selection rectangle
 	if([selectedColumns count] && [selectedRows count] && [self tableGrid].numberOfColumns > 0 && [self tableGrid].numberOfRows > 0) {
-		NSRect selectionTopLeft = [self frameOfCellAtColumn:[selectedColumns firstIndex] row:[selectedRows firstIndex]];
-		NSRect selectionBottomRight = [self frameOfCellAtColumn:[selectedColumns lastIndex] row:[selectedRows lastIndex]];
-		
-		NSRect selectionRect;
-		selectionRect.origin = selectionTopLeft.origin;
-		selectionRect.size.width = NSMaxX(selectionBottomRight)-selectionTopLeft.origin.x;
-		selectionRect.size.height = NSMaxY(selectionBottomRight)-selectionTopLeft.origin.y;
-		
-        NSRect selectionInsetRect = NSInsetRect(selectionRect, 1, 1);
-		NSBezierPath *selectionPath = [NSBezierPath bezierPathWithRect:selectionInsetRect];
-		NSAffineTransform *translate = [NSAffineTransform transform];
-		[translate translateXBy:-0.5 yBy:-0.5];
-		[selectionPath transformUsingAffineTransform:translate];
-		
 		NSColor *selectionColor = [NSColor alternateSelectedControlColor];
 		
 		// If the view is not the first responder, then use a gray selection color
@@ -647,7 +664,13 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		
 		// Set the sticky edges
 		[[self tableGrid] _setStickyColumn:columnEdge row:rowEdge];
-		
+        
+        if (mouseDownColumn < column) {
+            [[self tableGrid] scrollForFrozenColumnsFromColumn:column - 1 right:YES];
+        } else if (mouseDownColumn > column) {
+            [[self tableGrid] scrollForFrozenColumnsFromColumn:column + 1 right:NO];
+        }
+        
         [self setNeedsDisplay:YES];
 	}
 	
@@ -915,7 +938,23 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 
 - (MBTableGrid *)tableGrid
 {
-	return (MBTableGrid *)[[self enclosingScrollView] superview];
+    if (!self.cachedTableGrid) {
+        NSScrollView *scrollView = self.enclosingScrollView;
+        
+        // Will be nil for the floating frozen view:
+        if (!scrollView) {
+            scrollView = self.superview.superview;
+        }
+        
+        self.cachedTableGrid = scrollView.superview;
+    }
+    
+	return self.cachedTableGrid;
+}
+
+- (BOOL)frozen
+{
+    return !self.enclosingScrollView;
 }
 
 - (void)editSelectedCell:(id)sender text:(NSString *)aString
@@ -1018,11 +1057,10 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 	} else {
 		NSText *editor = [[self window] fieldEditor:YES forObject:self];
 		editor.delegate = self;
-		
+        
 		cellFrame = NSInsetRect(cellFrame, kCELL_EDIT_HORIZONTAL_PADDING, 0);
 		cellFrame.origin.y += 1;
 		[selectedCell editWithFrame:cellFrame inView:self editor:editor delegate:self event:nil];
-		
 		
         NSFormatter *formatter = [[self tableGrid] _formatterForColumn:selectedColumn];
         

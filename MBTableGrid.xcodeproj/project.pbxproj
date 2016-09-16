@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		172FFBFB1D8B554A0077699F /* MBTableGridShadowView.h in Headers */ = {isa = PBXBuildFile; fileRef = 172FFBF91D8B554A0077699F /* MBTableGridShadowView.h */; };
+		172FFBFC1D8B554A0077699F /* MBTableGridShadowView.m in Sources */ = {isa = PBXBuildFile; fileRef = 172FFBFA1D8B554A0077699F /* MBTableGridShadowView.m */; };
 		173D292D1AA1779F009945FC /* MBFooterTextCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 173D292B1AA1779F009945FC /* MBFooterTextCell.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		173D292E1AA1779F009945FC /* MBFooterTextCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 173D292C1AA1779F009945FC /* MBFooterTextCell.m */; };
 		8D11072A0486CEB800E47090 /* MainMenu.nib in Resources */ = {isa = PBXBuildFile; fileRef = 29B97318FDCFA39411CA2CEA /* MainMenu.nib */; };
@@ -57,6 +59,8 @@
 		089C165DFE840E0CC02AAC07 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
 		13E42FB307B3F0F600E4EEF1 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = /System/Library/Frameworks/CoreData.framework; sourceTree = "<absolute>"; };
+		172FFBF91D8B554A0077699F /* MBTableGridShadowView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MBTableGridShadowView.h; sourceTree = SOURCE_ROOT; };
+		172FFBFA1D8B554A0077699F /* MBTableGridShadowView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MBTableGridShadowView.m; sourceTree = SOURCE_ROOT; };
 		173D292B1AA1779F009945FC /* MBFooterTextCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MBFooterTextCell.h; sourceTree = SOURCE_ROOT; };
 		173D292C1AA1779F009945FC /* MBFooterTextCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MBFooterTextCell.m; sourceTree = SOURCE_ROOT; };
 		29B97316FDCFA39411CA2CEA /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
@@ -237,6 +241,8 @@
 				C6BF26861A4AC4EE008EB93F /* MBTableGridFooterView.m */,
 				C9412B380D8B2F5400E9E614 /* MBTableGridHeaderView.h */,
 				C9412B390D8B2F5400E9E614 /* MBTableGridHeaderView.m */,
+				172FFBF91D8B554A0077699F /* MBTableGridShadowView.h */,
+				172FFBFA1D8B554A0077699F /* MBTableGridShadowView.m */,
 				173D292B1AA1779F009945FC /* MBFooterTextCell.h */,
 				173D292C1AA1779F009945FC /* MBFooterTextCell.m */,
 				C6BF268A1A4AC953008EB93F /* MBFooterPopupButtonCell.h */,
@@ -287,6 +293,7 @@
 				E2E62BFA1781C53800F36275 /* MBTableGridHeaderCell.h in Headers */,
 				E2E62BF71781C53800F36275 /* MBTableGrid.h in Headers */,
 				E2E62BF81781C53800F36275 /* MBTableGridContentView.h in Headers */,
+				172FFBFB1D8B554A0077699F /* MBTableGridShadowView.h in Headers */,
 				E2E62BF91781C53800F36275 /* MBTableGridHeaderView.h in Headers */,
 				C6BF26891A4AC502008EB93F /* MBTableGridFooterView.h in Headers */,
 			);
@@ -403,6 +410,7 @@
 				E2E62BBB1781C37600F36275 /* MBTableGridContentView.m in Sources */,
 				C6AB1C271A15C3AB0092B29C /* MBImageCell.m in Sources */,
 				E2E62BBC1781C37800F36275 /* MBTableGridHeaderView.m in Sources */,
+				172FFBFC1D8B554A0077699F /* MBTableGridShadowView.m in Sources */,
 				173D292E1AA1779F009945FC /* MBFooterTextCell.m in Sources */,
 				C6BF268D1A4AC967008EB93F /* MBFooterPopupButtonCell.m in Sources */,
 				E2E62BBD1781C37B00F36275 /* MBTableGridHeaderCell.m in Sources */,
