@@ -642,7 +642,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		cellRect = [self convertRect:cellRect toView:columnContentView];
 		if (!NSContainsRect(columnContentView.visibleRect, cellRect)) {
 			cellRect.origin.x = columnContentView.visibleRect.origin.x;
-			[self scrollToArea:cellRect animate:NO];
+            [self scrollAreaToVisible:cellRect];
 		}
 		else {
 			[self setNeedsDisplayInRect:cellRect];
@@ -696,7 +696,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	cellRect = [self convertRect:cellRect toView:columnContentView];
 	if (!NSContainsRect(columnContentView.visibleRect, cellRect)) {
 		cellRect.origin.x = columnContentView.visibleRect.origin.x;
-		[self scrollToArea:cellRect animate:NO];
+        [self scrollAreaToVisible:cellRect];
 	}
 	
 	[columnContentView setNeedsDisplay:YES];
@@ -740,7 +740,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
         cellRect = [self convertRect:cellRect toView:columnContentView];
 		if (!NSContainsRect(columnContentView.visibleRect, cellRect)) {
 			cellRect.origin.x = columnContentView.visibleRect.origin.x;
-			[self scrollToArea:cellRect animate:NO];
+            [self scrollAreaToVisible:cellRect];
 		}
 		else {
 			[self setNeedsDisplayInRect:cellRect];
@@ -793,7 +793,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
         cellRect = [self convertRect:cellRect toView:columnContentView];
 		if (!NSContainsRect(columnContentView.visibleRect, cellRect)) {
 			cellRect.origin.x = columnContentView.visibleRect.origin.x;
-			[self scrollToArea:cellRect animate:NO];
+            [self scrollAreaToVisible:cellRect];
 		}
 		
 		[columnContentView setNeedsDisplay:YES];
@@ -818,17 +818,18 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	}
 
 	if (column > 0) {
-        MBTableGridContentView *columnContentView = [self contentViewForColumn:column - 1];
 		NSRect cellRect = [self frameOfCellAtColumn:column - 1 row:row];
+        cellRect = [self convertRect:cellRect toView:contentScrollView.contentView];
         
-        [self scrollForFrozenColumnsFromColumn:column right:NO];
-        
-        if (!NSContainsRect(columnContentView.visibleRect, cellRect)) {
-			cellRect.origin.y = columnContentView.visibleRect.origin.y;
-			[self scrollToArea:cellRect animate:NO];
-        } else {
-			[self setNeedsDisplayInRect:cellRect];
-		}
+        if (![self scrollForFrozenColumnsFromColumn:column right:NO]) {
+            if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
+                cellRect.origin.x = cellRect.origin.x - self.contentView.visibleRect.size.width + cellRect.size.width;
+                cellRect.origin.y = self.contentView.visibleRect.origin.y;
+                [self scrollToArea:cellRect animate:NO];
+            } else {
+                [self setNeedsDisplayInRect:cellRect];
+            }
+        }
 	}
 
 	// If we're already at the first column, do nothing
@@ -865,16 +866,17 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	NSUInteger row = [self.selectedRowIndexes firstIndex];
 
 	if (firstColumn > 0) {
-        MBTableGridContentView *columnContentView = [self contentViewForColumn:firstColumn - 1];
 		NSRect cellRect = [self frameOfCellAtColumn:firstColumn - 1 row:row];
+        cellRect = [self convertRect:cellRect toView:contentScrollView.contentView];
         
-        [self scrollForFrozenColumnsFromColumn:firstColumn right:NO];
+        if (![self scrollForFrozenColumnsFromColumn:firstColumn right:NO]) {
+            if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
+                cellRect.origin.x = cellRect.origin.x - self.contentView.visibleRect.size.width + cellRect.size.width;
+                cellRect.origin.y = self.contentView.visibleRect.origin.y;
+                [self scrollToArea:cellRect animate:NO];
+            }
+        }
         
-		if (!NSContainsRect(columnContentView.visibleRect, cellRect)) {
-            cellRect.origin.y = self.contentView.visibleRect.origin.y;
-			[self scrollToArea:cellRect animate:NO];
-		}
-		
 		[self.contentView setNeedsDisplay:YES];
 	}
 
@@ -925,15 +927,16 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		NSRect cellRect = [self frameOfCellAtColumn:column + 1 row:row];
 		cellRect = [self convertRect:cellRect toView:contentScrollView.contentView];
         
-        [self scrollForFrozenColumnsFromColumn:column right:YES];
-        
-		if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
-			cellRect.origin.y = self.contentView.visibleRect.origin.y;
-			[self scrollToArea:cellRect animate:NO];
-		} else {
-			[self setNeedsDisplayInRect:cellRect];
-		}
-	}
+        if (![self scrollForFrozenColumnsFromColumn:column right:YES]) {
+            if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
+                cellRect.origin.x = cellRect.origin.x - self.contentView.visibleRect.size.width + cellRect.size.width;
+                cellRect.origin.y = self.contentView.visibleRect.origin.y;
+                [self scrollToArea:cellRect animate:NO];
+            } else {
+                [self setNeedsDisplayInRect:cellRect];
+            }
+        }
+    }
 }
 
 - (void)moveRightAndModifySelection:(id)sender {
@@ -976,13 +979,14 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		NSRect cellRect = [self frameOfCellAtColumn:lastColumn + 1 row:row];
 		cellRect = [self convertRect:cellRect toView:contentScrollView.contentView];
         
-        [self scrollForFrozenColumnsFromColumn:lastColumn right:YES];
+        if (![self scrollForFrozenColumnsFromColumn:lastColumn right:YES]) {
+            if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
+                cellRect.origin.x = cellRect.origin.x - self.contentView.visibleRect.size.width + cellRect.size.width;
+                cellRect.origin.y = self.contentView.visibleRect.origin.y;
+                [self scrollToArea:cellRect animate:NO];
+            }
+        }
         
-        if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
-			cellRect.origin.y = self.contentView.visibleRect.origin.y;
-			[self scrollToArea:cellRect animate:NO];
-		}
-		
 		[self.contentView setNeedsDisplay:YES];
 	}
 }
@@ -1043,10 +1047,15 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		}];
 	}
 	else {
-        [self.contentView scrollRectToVisible:area];
-        [self.frozenContentView scrollRectToVisible:area];
+        [contentScrollView.contentView scrollToPoint:area.origin];
 		[self setNeedsDisplayInRect:area];
 	}
+}
+
+- (void)scrollAreaToVisible:(NSRect)area {
+    [self.contentView scrollRectToVisible:area];
+    [self.frozenContentView scrollRectToVisible:area];
+    [self setNeedsDisplayInRect:area];
 }
 
 - (void)selectAll:(id)sender {
@@ -1744,15 +1753,15 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
     return self.freezeColumns && column < self.numberOfFrozenColumns;
 }
 
-- (void)scrollForFrozenColumnsFromColumn:(NSUInteger)fromColumn right:(BOOL)right {
+- (BOOL)scrollForFrozenColumnsFromColumn:(NSUInteger)fromColumn right:(BOOL)right {
     if ((!right && fromColumn == 0) || (right && fromColumn >= self.numberOfColumns - 1)) {
-        return;
+        return NO;
     }
     
     NSUInteger toColumn = right ? fromColumn + 1 : fromColumn - 1;
     
     if ([self isFrozenColumn:toColumn] || toColumn == 0) {
-        return;
+        return NO;
     }
     
     BOOL wantScroll = NO;
@@ -1774,6 +1783,8 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
         [contentScrollView.contentView scrollToPoint:offset];
         [contentScrollView reflectScrolledClipView:contentScrollView.contentView];
     }
+    
+    return wantScroll;
 }
 
 #pragma mark - Overridden Property Accessors

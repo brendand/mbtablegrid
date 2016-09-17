@@ -734,8 +734,10 @@ typedef enum {
  *
  * @details		If moving between a frozen column and an unfrozen one,
  *              this will scroll to reveal the adjacent column, as needed.
+ *
+ * @return      YES if scrolling was appropriate.
  */
-- (void)scrollForFrozenColumnsFromColumn:(NSUInteger)fromColumn right:(BOOL)right;
+- (BOOL)scrollForFrozenColumnsFromColumn:(NSUInteger)fromColumn right:(BOOL)right;
 
 /**
  * @}
