@@ -943,11 +943,6 @@ NSString * const MBTableGridTrackingPartKey = @"part";
     if (!self.cachedTableGrid) {
         NSScrollView *scrollView = self.enclosingScrollView;
         
-        // Will be nil for the floating frozen view:
-        if (!scrollView) {
-            scrollView = self.superview.superview;
-        }
-        
         self.cachedTableGrid = scrollView.superview;
     }
     
@@ -956,7 +951,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 
 - (BOOL)frozen
 {
-    return !self.enclosingScrollView;
+    return self == self.tableGrid.frozenContentView;
 }
 
 - (void)editSelectedCell:(id)sender text:(NSString *)aString

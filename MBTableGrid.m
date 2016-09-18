@@ -53,6 +53,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 @interface MBTableGrid ()
 
 @property (nonatomic, strong) NSUndoManager *cachedUndoManager;
+@property (nonatomic) BOOL syncronizingScroll;
 
 @end
 
@@ -179,7 +180,6 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		// Setup the content view
 		NSRect contentFrame = NSMakeRect(MBTableGridRowHeaderWidth, MBTableGridColumnHeaderHeight, NSWidth(frameRect) - MBTableGridRowHeaderWidth, NSHeight(frameRect) - MBTableGridColumnHeaderHeight);
 		contentScrollView = [[NSScrollView alloc] initWithFrame:contentFrame];
-        frozenContentView = [[MBTableGridContentView alloc] initWithFrame:NSMakeRect(0, 0, 0, contentFrame.size.height)];
 		contentView = [[MBTableGridContentView alloc] initWithFrame:NSMakeRect(0, 0, contentFrame.size.width, contentFrame.size.height)];
 		[contentScrollView setDocumentView:contentView];
 		[contentScrollView setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
@@ -188,10 +188,25 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		[contentScrollView setAutohidesScrollers:YES];
 		[contentScrollView setDrawsBackground:YES];
 		contentScrollView.backgroundColor = [NSColor colorWithCalibratedWhite:0.98 alpha:1.0];
-        [contentScrollView addFloatingSubview:frozenContentView forAxis:NSEventGestureAxisHorizontal];
-        frozenContentView.hidden = YES;
-		
 		[self addSubview:contentScrollView];
+
+        // Setup the frozen content view
+        NSRect frozenContentFrame = NSMakeRect(MBTableGridRowHeaderWidth, MBTableGridColumnHeaderHeight, 0, NSHeight(frameRect) - MBTableGridColumnHeaderHeight);
+        frozenContentScrollView = [[NSScrollView alloc] initWithFrame:frozenContentFrame];
+        frozenContentView = [[MBTableGridContentView alloc] initWithFrame:NSMakeRect(0, 0, 0, frozenContentFrame.size.height)];
+        [frozenContentScrollView setDocumentView:frozenContentView];
+        [frozenContentScrollView setAutoresizingMask:NSViewHeightSizable];
+        [frozenContentScrollView setHasHorizontalScroller:NO];
+        [frozenContentScrollView setHasVerticalScroller:YES];
+        NSEdgeInsets insets = frozenContentScrollView.scrollerInsets;
+        insets.right = -99999;
+        frozenContentScrollView.scrollerInsets = insets;
+        [frozenContentScrollView setAutohidesScrollers:YES];
+        [frozenContentScrollView setHorizontalScrollElasticity:NSScrollElasticityNone];
+        [frozenContentScrollView setDrawsBackground:YES];
+        frozenContentScrollView.backgroundColor = [NSColor colorWithCalibratedWhite:0.98 alpha:1.0];
+        frozenContentScrollView.hidden = YES;
+		[self addSubview:frozenContentScrollView];
 
         // Setup the column shadow
         NSRect columnShadowFrame = NSMakeRect(MBTableGridRowHeaderWidth, MBTableGridColumnHeaderHeight, contentFrame.size.width, MBTableGridShadowHeight);
@@ -215,6 +230,8 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(columnFooterViewDidScroll:) name:NSViewBoundsDidChangeNotification object:[columnFooterScrollView contentView]];
         
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(contentViewDidScroll:) name:NSViewBoundsDidChangeNotification object:[contentScrollView contentView]];
+        
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(frozenContentViewDidScroll:) name:NSViewBoundsDidChangeNotification object:[frozenContentScrollView contentView]];
         
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(didUndoOrRedo:) name:NSUndoManagerDidUndoChangeNotification object:nil];
         
@@ -269,16 +286,20 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 - (void)setFooterHidden:(BOOL)footerHidden {
 	_footerHidden = footerHidden;
 	NSSize footerSize = columnFooterScrollView.frame.size;
-	NSSize contentScrollSize = contentScrollView.frame.size;
+    NSSize contentScrollSize = contentScrollView.frame.size;
+	NSSize frozenContentScrollSize = frozenContentScrollView.frame.size;
 	NSSize rowHeaderScrollSize = rowHeaderScrollView.frame.size;
 	if (footerHidden) {
 		contentScrollSize.height = self.frame.size.height - columnHeaderScrollView.frame.size.height - 1;
+		frozenContentScrollSize.height = self.frame.size.height - columnHeaderScrollView.frame.size.height - 1;
 		rowHeaderScrollSize.height = self.frame.size.height - columnHeaderScrollView.frame.size.height - 1;
 	} else {
 		contentScrollSize.height = self.frame.size.height - footerSize.height - columnHeaderScrollView.frame.size.height;
+		frozenContentScrollSize.height = self.frame.size.height - footerSize.height - columnHeaderScrollView.frame.size.height;
 		rowHeaderScrollSize.height = self.frame.size.height - footerSize.height - columnHeaderScrollView.frame.size.height;
 	}
 	[contentScrollView setFrameSize:contentScrollSize];
+	[frozenContentScrollView setFrameSize:frozenContentScrollSize];
 	[rowHeaderScrollView setFrameSize:rowHeaderScrollSize];
 	[rowHeaderScrollView setNeedsDisplay:YES];
 }
@@ -435,6 +456,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
     [columnFooterView setFrameSize:NSMakeSize(NSWidth(columnFooterView.frame) + distance, NSHeight(columnFooterView.frame))];
     
     if (isFrozen) {
+        [frozenContentScrollView setFrameSize:NSMakeSize(NSWidth(frozenContentView.frame) + distance, NSHeight(frozenContentScrollView.frame))];
         [frozenContentView setFrameSize:NSMakeSize(NSWidth(frozenContentView.frame) + distance, NSHeight(frozenContentView.frame))];
         [frozenColumnHeaderView setFrameSize:NSMakeSize(NSWidth(frozenColumnHeaderView.frame) + distance, NSHeight(frozenColumnHeaderView.frame))];
         [frozenColumnFooterView setFrameSize:NSMakeSize(NSWidth(frozenColumnFooterView.frame) + distance, NSHeight(frozenColumnFooterView.frame))];
@@ -637,12 +659,11 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		
 		self.selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:row];
 		
-        MBTableGridContentView *columnContentView = [self contentViewForColumn:column];
 		NSRect cellRect = [self frameOfCellAtColumn:column row:row];
-		cellRect = [self convertRect:cellRect toView:columnContentView];
-		if (!NSContainsRect(columnContentView.visibleRect, cellRect)) {
-			cellRect.origin.x = columnContentView.visibleRect.origin.x;
-            [self scrollAreaToVisible:cellRect];
+		cellRect = [self convertRect:cellRect toView:self.contentView];
+		if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
+			cellRect.origin.x = self.contentView.visibleRect.origin.x;
+            [self scrollToArea:cellRect animate:NO];
 		}
 		else {
 			[self setNeedsDisplayInRect:cellRect];
@@ -691,15 +712,15 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		}
 	}
 	
-    MBTableGridContentView *columnContentView = [self contentViewForColumn:column];
 	NSRect cellRect = [self frameOfCellAtColumn:column row:firstRow];
-	cellRect = [self convertRect:cellRect toView:columnContentView];
-	if (!NSContainsRect(columnContentView.visibleRect, cellRect)) {
-		cellRect.origin.x = columnContentView.visibleRect.origin.x;
-        [self scrollAreaToVisible:cellRect];
+	cellRect = [self convertRect:cellRect toView:self.contentView];
+	if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
+		cellRect.origin.x = self.contentView.visibleRect.origin.x;
+        [self scrollToArea:cellRect animate:NO];
 	}
 	
-	[columnContentView setNeedsDisplay:YES];
+    [self.contentView setNeedsDisplay:YES];
+	[self.frozenContentView setNeedsDisplay:YES];
 	
 }
 
@@ -735,12 +756,12 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		}
 		self.selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:row];
 
-        MBTableGridContentView *columnContentView = [self contentViewForColumn:column];
 		NSRect cellRect = [self frameOfCellAtColumn:column row:row];
-        cellRect = [self convertRect:cellRect toView:columnContentView];
-		if (!NSContainsRect(columnContentView.visibleRect, cellRect)) {
-			cellRect.origin.x = columnContentView.visibleRect.origin.x;
-            [self scrollAreaToVisible:cellRect];
+        cellRect = [self convertRect:cellRect toView:self.contentView];
+		if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
+            cellRect.origin.y = cellRect.origin.y - self.contentView.visibleRect.size.height + cellRect.size.height;
+			cellRect.origin.x = self.contentView.visibleRect.origin.x;
+            [self scrollToArea:cellRect animate:NO];
 		}
 		else {
 			[self setNeedsDisplayInRect:cellRect];
@@ -788,15 +809,16 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 			}
 		}
 
-        MBTableGridContentView *columnContentView = [self contentViewForColumn:column];
 		NSRect cellRect = [self frameOfCellAtColumn:column row:lastRow + 1];
-        cellRect = [self convertRect:cellRect toView:columnContentView];
-		if (!NSContainsRect(columnContentView.visibleRect, cellRect)) {
-			cellRect.origin.x = columnContentView.visibleRect.origin.x;
-            [self scrollAreaToVisible:cellRect];
+        cellRect = [self convertRect:cellRect toView:self.contentView];
+		if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
+            cellRect.origin.y = cellRect.origin.y - self.contentView.visibleRect.size.height + cellRect.size.height;
+			cellRect.origin.x = self.contentView.visibleRect.origin.x;
+            [self scrollToArea:cellRect animate:NO];
 		}
 		
-		[columnContentView setNeedsDisplay:YES];
+        [self.contentView setNeedsDisplay:YES];
+		[self.frozenContentView setNeedsDisplay:YES];
 	}
 }
 
@@ -823,7 +845,6 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
         
         if (![self scrollForFrozenColumnsFromColumn:column right:NO]) {
             if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
-                cellRect.origin.x = cellRect.origin.x - self.contentView.visibleRect.size.width + cellRect.size.width;
                 cellRect.origin.y = self.contentView.visibleRect.origin.y;
                 [self scrollToArea:cellRect animate:NO];
             } else {
@@ -871,7 +892,6 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
         
         if (![self scrollForFrozenColumnsFromColumn:firstColumn right:NO]) {
             if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
-                cellRect.origin.x = cellRect.origin.x - self.contentView.visibleRect.size.width + cellRect.size.width;
                 cellRect.origin.y = self.contentView.visibleRect.origin.y;
                 [self scrollToArea:cellRect animate:NO];
             }
@@ -1010,14 +1030,12 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 - (void)scrollToRow:(NSUInteger)rowIndex animate:(BOOL)shouldAnimate {
     NSUInteger column = self.selectedColumnIndexes.firstIndex;
-    MBTableGridContentView *columnContentView = [self contentViewForColumn:column];
-	NSRect cellRect = [columnContentView frameOfCellAtColumn:column row:rowIndex];
+	NSRect cellRect = [self.contentView frameOfCellAtColumn:column row:rowIndex];
 	[self scrollToArea:cellRect animate:shouldAnimate];
 }
 
 - (void)scrollToRow:(NSUInteger)rowIndex column:(NSUInteger)columnIndex animate:(BOOL)shouldAnimate {
-    MBTableGridContentView *columnContentView = [self contentViewForColumn:columnIndex];
-	NSRect cellRect = [columnContentView frameOfCellAtColumn:columnIndex row:rowIndex];
+	NSRect cellRect = [self.contentView frameOfCellAtColumn:columnIndex row:rowIndex];
 	[self scrollToArea:cellRect animate:shouldAnimate];
 }
 
@@ -1048,14 +1066,14 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	}
 	else {
         [contentScrollView.contentView scrollToPoint:area.origin];
-		[self setNeedsDisplayInRect:area];
+        
+        NSRect frozenArea = area;
+        frozenArea.origin.x = 0;
+        
+        [frozenContentScrollView.contentView scrollToPoint:frozenArea.origin];
+		
+        [self setNeedsDisplayInRect:area];
 	}
-}
-
-- (void)scrollAreaToVisible:(NSRect)area {
-    [self.contentView scrollRectToVisible:area];
-    [self.frozenContentView scrollRectToVisible:area];
-    [self setNeedsDisplayInRect:area];
 }
 
 - (void)selectAll:(id)sender {
@@ -1128,6 +1146,12 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 - (void)syncronizeScrollView:(NSScrollView *)scrollView withChangedBoundsOrigin:(NSPoint)changedBoundsOrigin horizontal:(BOOL)horizontal {
     
+    if (self.syncronizingScroll || (horizontal && scrollView == frozenContentScrollView)) {
+        return;
+    }
+    
+    self.syncronizingScroll = YES;
+    
     // Get the current origin
     NSPoint curOffset = [[scrollView contentView] bounds].origin;
     NSPoint newOffset = curOffset;
@@ -1146,6 +1170,8 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
     }
     
     [self updateShadows];
+    
+    self.syncronizingScroll = NO;
 }
 
 - (void)columnHeaderViewDidScroll:(NSNotification *)aNotification {
@@ -1154,6 +1180,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	NSPoint changedBoundsOrigin = [changedView bounds].origin;
 
     [self syncronizeScrollView:contentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
+    [self syncronizeScrollView:frozenContentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
     [self syncronizeScrollView:rowHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
     [self syncronizeScrollView:columnFooterScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
     
@@ -1165,6 +1192,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
     NSPoint changedBoundsOrigin = [changedView bounds].origin;
     
     [self syncronizeScrollView:contentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
+    [self syncronizeScrollView:frozenContentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
     
 }
 
@@ -1174,6 +1202,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
     NSPoint changedBoundsOrigin = [changedView bounds].origin;
     
     [self syncronizeScrollView:contentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
+    [self syncronizeScrollView:frozenContentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
     [self syncronizeScrollView:columnHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
     [self syncronizeScrollView:rowHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
     
@@ -1184,6 +1213,19 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
     NSView *changedView = [aNotification object];
     NSPoint changedBoundsOrigin = [changedView bounds].origin;
     
+    [self syncronizeScrollView:frozenContentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
+    [self syncronizeScrollView:columnHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
+    [self syncronizeScrollView:rowHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
+    [self syncronizeScrollView:columnFooterScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
+    
+}
+
+- (void)frozenContentViewDidScroll:(NSNotification *)aNotification {
+    
+    NSView *changedView = [aNotification object];
+    NSPoint changedBoundsOrigin = [changedView bounds].origin;
+    
+    [self syncronizeScrollView:contentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
     [self syncronizeScrollView:columnHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
     [self syncronizeScrollView:rowHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
     [self syncronizeScrollView:columnFooterScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
@@ -1550,6 +1592,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	[contentView setFrameSize:contentRect.size];
     
     CGFloat frozenWidth = 0;
+    NSSize frozenScrollSize = frozenContentScrollView.bounds.size;
     NSSize frozenSize = contentRect.size;
     
     if (self.freezeColumns && self.numberOfFrozenColumns > 0) {
@@ -1558,10 +1601,12 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
         }
     }
     
+    frozenScrollSize.width = frozenWidth;
     frozenSize.width = frozenWidth;
     
+    [frozenContentScrollView setFrameSize:frozenScrollSize];
     [frozenContentView setFrameSize:frozenSize];
-    frozenContentView.hidden = frozenSize.width == 0.0;
+    frozenContentScrollView.hidden = frozenSize.width == 0.0;
     
 	// Update the column header view's size
 	NSRect columnHeaderFrame = [columnHeaderView frame];

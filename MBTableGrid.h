@@ -143,8 +143,11 @@ typedef enum {
 	/* Content */
 	NSScrollView *contentScrollView;
     MBTableGridContentView *contentView;
+    
+    /* Frozen Content */
+    NSScrollView *frozenContentScrollView;
     MBTableGridContentView *frozenContentView;
-		
+    
 	/* Behavior */
 	BOOL shouldOverrideModifiers;
 	
