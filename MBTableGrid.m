@@ -528,7 +528,21 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 #pragma mark Keyboard Events
 
 - (void)keyDown:(NSEvent *)theEvent {
-	[self interpretKeyEvents:@[theEvent]];
+    // Special handling to detect the numeric keypad Enter key
+    if (theEvent.modifierFlags & NSNumericPadKeyMask) {
+        NSString *characters = theEvent.charactersIgnoringModifiers;
+        
+        if (characters.length == 1) {
+            unichar keyChar = [characters characterAtIndex:0];
+            
+            if (keyChar == NSEnterCharacter) {
+                [self doCommandBySelector:@selector(insertNewlineIgnoringFieldEditor:)];
+                return;
+            }
+        }
+    }
+    
+    [self interpretKeyEvents:@[theEvent]];
 }
 
 /*- (void)interpretKeyEvents:(NSArray *)eventArray
@@ -582,6 +596,10 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		// Pressing Return moves to the next row
 		[self moveDown:sender];
 	}
+}
+
+- (void)insertNewlineIgnoringFieldEditor:(id)sender {
+    [self insertText:@"\n"];
 }
 
 - (NSUInteger)previousNonGroupRowFromRow:(NSUInteger)row {
@@ -1117,13 +1135,19 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		[columnContentView editSelectedCell:self text:aString];
 		
 		if ([selectedCell isKindOfClass:[MBTableGridCell class]]) {
-			// Insert the typed string into the field editor
-			NSText *fieldEditor = [[self window] fieldEditor:YES forObject:columnContentView];
-			fieldEditor.delegate = columnContentView;
-			[fieldEditor setString:aString];
+            NSText *fieldEditor = [[self window] fieldEditor:YES forObject:columnContentView];
+            fieldEditor.delegate = columnContentView;
             
-            // The textDidBeginEditing notification isn't sent yet, so invoke a custom method
-            [columnContentView textDidBeginEditingWithEditor:fieldEditor];
+            if ([aString isEqualToString:@"\n"]) {
+                // Select the existing string
+                [fieldEditor selectAll:nil];
+            } else {
+                // Insert the typed string into the field editor
+                [fieldEditor setString:aString];
+                
+                // The textDidBeginEditing notification isn't sent yet, so invoke a custom method
+                [columnContentView textDidBeginEditingWithEditor:fieldEditor];
+            }
 		}
 		
 	} else {
