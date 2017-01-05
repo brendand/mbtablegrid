@@ -1140,7 +1140,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
             
             if ([aString isEqualToString:@"\n"]) {
                 // Select the existing string
-                [fieldEditor selectAll:nil];
+                fieldEditor.selectedRange = NSMakeRange(fieldEditor.string.length, 0);
             } else {
                 // Insert the typed string into the field editor
                 [fieldEditor setString:aString];
