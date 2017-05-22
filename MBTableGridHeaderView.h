@@ -25,6 +25,7 @@
 
 #import <Cocoa/Cocoa.h>
 #import "MBTableGridHeaderCell.h"
+#import "TFUserDefaults.h"
 
 @class MBTableGrid;
 
@@ -53,6 +54,8 @@
 	NSMutableDictionary *columnAutoSaveProperties;
 	
 }
+
+@property (nonatomic, weak) TFUserDefaults *documentDefaults;
 
 /**
  * @name		The Grid View

@@ -117,6 +117,8 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 @implementation MBTableGrid
 
+@synthesize defaultCellFont = _defaultCellFont;
+
 #pragma mark -
 #pragma mark Initialization & Superclass Overrides
 
@@ -141,9 +143,13 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 		columnHeaderScrollView = [[NSScrollView alloc] initWithFrame:columnHeaderFrame];
 		columnHeaderView = [[MBTableGridHeaderView alloc] initWithFrame:NSMakeRect(0, 0, columnHeaderFrame.size.width, columnHeaderFrame.size.height)];
+		columnHeaderView.documentDefaults = self.documentDefaults;
+		
 		//	[columnHeaderView setAutoresizingMask:NSViewWidthSizable];
 		[columnHeaderView setOrientation:MBTableHeaderHorizontalOrientation];
         frozenColumnHeaderView = [[MBTableGridHeaderView alloc] initWithFrame:NSMakeRect(0, 0, 0, columnHeaderFrame.size.height)];
+		frozenColumnHeaderView.documentDefaults = self.documentDefaults;
+		
         [frozenColumnHeaderView setOrientation:MBTableHeaderHorizontalOrientation];
 		[columnHeaderScrollView setDocumentView:columnHeaderView];
 		[columnHeaderScrollView setAutoresizingMask:NSViewWidthSizable];
@@ -156,6 +162,8 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		NSRect rowHeaderFrame = NSMakeRect(0, MBTableGridColumnHeaderHeight, MBTableGridRowHeaderWidth, [self frame].size.height - MBTableGridColumnHeaderHeight * 2);
 		rowHeaderScrollView = [[NSScrollView alloc] initWithFrame:rowHeaderFrame];
 		rowHeaderView = [[MBTableGridHeaderView alloc] initWithFrame:NSMakeRect(0, 0, rowHeaderFrame.size.width, rowHeaderFrame.size.height)];
+		rowHeaderView.documentDefaults = self.documentDefaults;
+		
 		//[rowHeaderView setAutoresizingMask:NSViewHeightSizable];
 		[rowHeaderView setOrientation:MBTableHeaderVerticalOrientation];
 		[rowHeaderScrollView setDocumentView:rowHeaderView];
@@ -254,6 +262,13 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		
 	}
 	return self;
+}
+
+- (void)setDefaultCellFont:(NSFont *)defaultCellFont {
+	_defaultCellFont = defaultCellFont;
+	[[self contentView] setDefaultCellFont:defaultCellFont];
+	[[self frozenContentView] setDefaultCellFont:defaultCellFont];
+	[self reloadData];
 }
 
 - (void)sortButtonClickedOnColumn:(NSUInteger)columnIndex {
@@ -2123,7 +2138,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		id value = [[self dataSource] tableGrid:self objectValueForColumn:columnIndex row:rowIndex];
 		return value;
 	}
-	else {
+	else if ([self dataSource]) {
 		NSLog(@"WARNING: MBTableGrid data source does not implement tableGrid:objectValueForColumn:row: - dataSource:%@", [self dataSource]);
 	}
 	return nil;

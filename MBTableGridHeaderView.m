@@ -311,23 +311,25 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
         [[self window] disableCursorRects];
         
         // Set drag distance
-        CGFloat dragDistance = loc.x - lastMouseDraggingLocation.x;
-        
-        lastMouseDraggingLocation = loc;
-        
-        // Resize column and resize views
+		CGFloat dragDistance = loc.x - lastMouseDraggingLocation.x;
 		
-        CGFloat offset = [self.tableGrid resizeColumnWithIndex:draggingColumnIndex withDistance:dragDistance location:loc];
-        lastMouseDraggingLocation.x += offset;
-        
-        if (offset != 0.0) {
-            [[NSCursor resizeRightCursor] set];
-        } else {
-            [[NSCursor resizeLeftRightCursor] set];
-        }
-               
+		lastMouseDraggingLocation = loc;
+		
+		// Resize column and resize views
+		
+		if (draggingColumnIndex != NSNotFound) {
+			CGFloat offset = [self.tableGrid resizeColumnWithIndex:draggingColumnIndex withDistance:dragDistance location:loc];
+			lastMouseDraggingLocation.x += offset;
+			
+			if (offset != 0.0) {
+				[[NSCursor resizeRightCursor] set];
+			} else {
+				[[NSCursor resizeLeftRightCursor] set];
+			}
+		}
+		
     } else {
-    
+		
         // Drag operation doesn't start until the mouse has moved more than 5 points
         CGFloat dragThreshold = 5.0;
         
@@ -366,15 +368,17 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
                 firstItemToSelect = itemUnderMouse;
                 numberOfItemsToSelect = mouseDownItem - itemUnderMouse + 1;
             }
-            
-            // Set the selected items
-            if (self.orientation == MBTableHeaderHorizontalOrientation) {
-                [self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(firstItemToSelect, numberOfItemsToSelect)];
-            } else if (self.orientation == MBTableHeaderVerticalOrientation) {
-                [self tableGrid].selectedRowIndexes = [NSMutableIndexSet indexSetWithIndexesInRange:NSMakeRange(firstItemToSelect, numberOfItemsToSelect)];
-            }
-        }
-        
+			
+			// Set the selected items
+			if (firstItemToSelect != NSNotFound && firstItemToSelect >= 0 && numberOfItemsToSelect > 0 && numberOfItemsToSelect != NSNotFound) {
+				if (self.orientation == MBTableHeaderHorizontalOrientation) {
+					[self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(firstItemToSelect, numberOfItemsToSelect)];
+				} else if (self.orientation == MBTableHeaderVerticalOrientation) {
+					[self tableGrid].selectedRowIndexes = [NSMutableIndexSet indexSetWithIndexesInRange:NSMakeRange(firstItemToSelect, numberOfItemsToSelect)];
+				}
+			}
+		}
+		
     }
 }
 
@@ -383,13 +387,19 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
     
     if (canResize) {
 		
-		// if we have an autosaveName, store a dictionary of column widths.
+		[self autoSaveColumnProperties];
 		
-		if (self.autosaveName) {
-			[self autoSaveColumnProperties];
+		NSString *draggedColumn = [NSString stringWithFormat:@"C-%lu", draggingColumnIndex];
+		
+		NSNumber *width = columnAutoSaveProperties[draggedColumn][kAutosavedColumnWidthKey];
+		NSDictionary *userInfo = nil;
+		
+		if (width) {
+			userInfo = @{@"columnIndex" : @(draggingColumnIndex),
+						 @"width" : width};
 		}
 		
-        isResizing = NO;
+		isResizing = NO;
 		
         [[self window] enableCursorRects];
         [[self window] resetCursorRects];
@@ -401,7 +411,8 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 		if ([[[self tableGrid] delegate] respondsToSelector:@selector(tableGridDidResizeColumn:)]) {
 		
 			// Post the notification
-			[[NSNotificationCenter defaultCenter] postNotificationName:MBTableGridDidResizeColumnNotification object:[self tableGrid] userInfo:nil];
+			
+			[[NSNotificationCenter defaultCenter] postNotificationName:MBTableGridDidResizeColumnNotification object:[self tableGrid] userInfo:userInfo];
 
 		}
 		
@@ -491,8 +502,9 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 		columnAutoSaveProperties[[NSString stringWithFormat:@"C-%@", key]] = columnDict;
 	}];
 	
-	NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-	[defaults setObject:columnAutoSaveProperties forKey:self.autosaveName];
+	if (self.autosaveName) {
+		[self.documentDefaults setObject:columnAutoSaveProperties.mutableCopy forKey:self.autosaveName];
+	}
 }
 
 #pragma mark -
@@ -505,10 +517,10 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
         
         // Will be nil for the floating view:
         if (!scrollView) {
-            scrollView = self.superview.superview;
+            scrollView = (NSScrollView *)self.superview.superview;
         }
         
-        self.cachedTableGrid = scrollView.superview;
+        self.cachedTableGrid = (MBTableGrid *)scrollView.superview;
     }
     
     return self.cachedTableGrid;

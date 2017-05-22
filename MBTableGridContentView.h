@@ -71,6 +71,7 @@ typedef NS_ENUM(NSUInteger, MBTableGridTrackingPart)
     MBTableGridTrackingPart shouldDrawFillPart;
 	
 	MBTableGridCell *_defaultCell;
+	CGFloat _cellRowHeight;
 	
 	NSColor *_groupRowColor;
 	NSFont *_groupRowFont;
@@ -94,10 +95,14 @@ typedef NS_ENUM(NSUInteger, MBTableGridTrackingPart)
 - (MBTableGrid *)tableGrid;
 
 /**
- * @brief		A chached set of row indexes to determine which rows are "group" rows
+ * @brief		A cached set of row indexes to determine which rows are "group" rows
  */
 @property (nonatomic, strong) NSMutableDictionary *groupRowIndexes;
 
+/**
+ * @brief		sets the default font for the rows
+ */
+@property (nonatomic, strong) NSFont *defaultCellFont;
 
 /**
  * @}

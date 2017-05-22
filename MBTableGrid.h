@@ -25,6 +25,7 @@
 
 #import <Cocoa/Cocoa.h>
 #import <QuartzCore/QuartzCore.h>
+#import "TFUserDefaults.h"
 
 typedef enum : NSUInteger {
 	MBSortNone,
@@ -163,6 +164,8 @@ typedef enum {
 
 #pragma mark -
 #pragma mark Reloading the Grid
+
+@property (nonatomic, weak) TFUserDefaults *documentDefaults;
 
 /**
  * @name		Reloading the Grid
@@ -410,6 +413,13 @@ typedef enum {
  *				Otherwise, \c NO.
  */
 @property(assign) BOOL allowsMultipleSelection;
+
+
+/**
+ * @brief		Sets the default font to use for content cells
+ *
+ */
+@property(nonatomic, strong) NSFont *defaultCellFont;
 
 
 /**

@@ -234,10 +234,10 @@
         
         // Will be nil for the floating view:
         if (!scrollView) {
-            scrollView = self.superview.superview;
+            scrollView = (NSScrollView *)self.superview.superview;
         }
         
-        self.cachedTableGrid = scrollView.superview;
+        self.cachedTableGrid = (MBTableGrid *)scrollView.superview;
     }
     
     return self.cachedTableGrid;

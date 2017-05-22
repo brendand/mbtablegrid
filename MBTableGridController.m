@@ -31,6 +31,7 @@
 #import "MBLevelIndicatorCell.h"
 #import "MBFooterTextCell.h"
 #import "MBFooterPopupButtonCell.h"
+#import "TFUserDefaults.h"
 
 NSString* kAutosavedColumnWidthKey = @"AutosavedColumnWidth";
 NSString* kAutosavedColumnIndexKey = @"AutosavedColumnIndex";
@@ -54,6 +55,7 @@ NSString * const ColumnText4 = @"text4";
 @end
 
 @interface MBTableGridController()
+@property (nonatomic, strong) TFUserDefaults *documentDefaults;
 @property (nonatomic, strong) MBPopupButtonCell *popupCell;
 @property (nonatomic, strong) MBTableGridCell *textCell;
 @property (nonatomic, strong) MBButtonCell *checkboxCell;
@@ -69,7 +71,7 @@ NSString * const ColumnText4 = @"text4";
 
 - (void)awakeFromNib 
 {
-    
+    self.documentDefaults = [TFUserDefaults new];
     
     columnSampleWidths = @[@40, @50, @60, @70, @80, @90, @100, @110, @120, @130];
     
@@ -81,7 +83,8 @@ NSString * const ColumnText4 = @"text4";
 	NSString *gridComponentID = [infoDict objectForKey:@"GridComponentID"];
 
 	tableGrid.autosaveName = [NSString stringWithFormat:@"MBTableGrid Columns records-table-%@", gridComponentID];
-	
+    tableGrid.documentDefaults = self.documentDefaults;
+    
 	NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
 	self.columnWidths = [defaults objectForKey:tableGrid.autosaveName];
 

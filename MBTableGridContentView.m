@@ -115,11 +115,13 @@ NSString * const MBTableGridTrackingPartKey = @"part";
         isCompleting = NO;
 		isDraggingColumnOrRow = NO;
         shouldDrawFillPart = MBTableGridTrackingPartNone;
-		
+				
 		_defaultCell = [[MBTableGridCell alloc] initTextCell:@""];
         [_defaultCell setBordered:YES];
 		[_defaultCell setScrollable:YES];
 		[_defaultCell setLineBreakMode:NSLineBreakByTruncatingTail];
+		
+		_cellRowHeight = 20;
 		
 		_groupRowColor = [NSColor colorWithCalibratedWhite:0.900 alpha:1.000];
 		_groupRowFont = [NSFont boldSystemFontOfSize:[NSFont systemFontSizeForControlSize:NSRegularControlSize]];
@@ -128,6 +130,20 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(mylistener:) name:@"NSMenuDidChangeItemNotification" object:self];
 	}
 	return self;
+}
+
+- (void)setDefaultCellFont:(NSFont *)defaultCellFont {
+	_defaultCellFont = defaultCellFont;
+	
+	NSDictionary *fontAttributes = @{NSFontAttributeName : defaultCellFont,
+									 NSFontSizeAttribute : @(defaultCellFont.pointSize)};
+	
+	CGSize textSize = [@"ABCWjxyz1230" sizeWithAttributes:fontAttributes];
+	_cellRowHeight = ceilf(textSize.height) + 4;
+
+	_groupRowFont = [NSFont boldSystemFontOfSize:defaultCellFont.pointSize];
+
+	[self setNeedsDisplay:YES];
 }
 
 - (void)mylistener:(id)sender
@@ -152,7 +168,8 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		NSUInteger row = 0;
 		while (row < numberOfRows) {
 			if ([[self tableGrid] _isGroupRow:row]) {
-				_groupRowIndexes[@(row)] = [NSValue valueWithRect:[self rectOfRow:row]];
+				NSRect groupRowRect = [self rectOfRow:row];
+				_groupRowIndexes[@(row)] = [NSValue valueWithRect:groupRowRect];
 			}
 			row++;
 		}
@@ -244,6 +261,8 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 				NSRect cellFrame = [self frameOfCellAtColumn:column row:row];
 				// Only draw the cell if we need to
 				NSCell *_cell = [[self tableGrid] _cellForColumn:column];
+				
+				_cell.font = _defaultCellFont;
 				
 				// If we need to draw then check if we're a popup button. This may be a bit of
 				// a hack, but it seems to clear up the problem with the popup button clearing
@@ -745,8 +764,8 @@ NSString * const MBTableGridTrackingPartKey = @"part";
     //NSLog(@"%s - %f %f %f %f", __func__, grabHandleRect.origin.x, grabHandleRect.origin.y, grabHandleRect.size.width, grabHandleRect.size.height);
 	// The main cursor should be the cell selection cursor
 	
-	NSIndexSet *selectedColumns = [self tableGrid].selectedColumnIndexes;
-	NSIndexSet *selectedRows = [self tableGrid].selectedRowIndexes;
+//	NSIndexSet *selectedColumns = [self tableGrid].selectedColumnIndexes;
+//	NSIndexSet *selectedRows = [self tableGrid].selectedRowIndexes;
 	NSRect selectionRect = [self selectionRect];
 	
 	if (!isFilling) {
@@ -943,7 +962,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
     if (!self.cachedTableGrid) {
         NSScrollView *scrollView = self.enclosingScrollView;
         
-        self.cachedTableGrid = scrollView.superview;
+        self.cachedTableGrid = (MBTableGrid *)scrollView.superview;
     }
     
 	return self.cachedTableGrid;
@@ -1061,7 +1080,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		
         NSFormatter *formatter = [[self tableGrid] _formatterForColumn:selectedColumn];
         
-        if (formatter && ![currentValue isEqual:@""]) {
+        if (formatter && ![currentValue isEqual:@""] && [currentValue isKindOfClass:[NSNumber class]]) {
             currentValue = [formatter stringForObjectValue:currentValue];
         }
 		
@@ -1126,10 +1145,10 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 - (NSRect)rectOfRow:(NSUInteger)rowIndex
 {
     
-	float heightForRow = 20.0;
+	float heightForRow = _cellRowHeight;
 	NSRect rect = NSMakeRect(0, 0, [self frame].size.width, heightForRow);
 	
-	rect.origin.y += 20.0 * rowIndex;
+	rect.origin.y += _cellRowHeight * rowIndex;
 	
 	/*NSUInteger i = 0;
 	while(i < rowIndex) {

@@ -11,6 +11,7 @@
 		172FFBFC1D8B554A0077699F /* MBTableGridShadowView.m in Sources */ = {isa = PBXBuildFile; fileRef = 172FFBFA1D8B554A0077699F /* MBTableGridShadowView.m */; };
 		173D292D1AA1779F009945FC /* MBFooterTextCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 173D292B1AA1779F009945FC /* MBFooterTextCell.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		173D292E1AA1779F009945FC /* MBFooterTextCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 173D292C1AA1779F009945FC /* MBFooterTextCell.m */; };
+		17A981851ED396AF00EDDBEA /* TFUserDefaults.m in Sources */ = {isa = PBXBuildFile; fileRef = 17A981841ED396AF00EDDBEA /* TFUserDefaults.m */; };
 		8D11072A0486CEB800E47090 /* MainMenu.nib in Resources */ = {isa = PBXBuildFile; fileRef = 29B97318FDCFA39411CA2CEA /* MainMenu.nib */; };
 		8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C165CFE840E0CC02AAC07 /* InfoPlist.strings */; };
 		8D11072D0486CEB800E47090 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; settings = {ATTRIBUTES = (); }; };
@@ -63,6 +64,8 @@
 		172FFBFA1D8B554A0077699F /* MBTableGridShadowView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MBTableGridShadowView.m; sourceTree = SOURCE_ROOT; };
 		173D292B1AA1779F009945FC /* MBFooterTextCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MBFooterTextCell.h; sourceTree = SOURCE_ROOT; };
 		173D292C1AA1779F009945FC /* MBFooterTextCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MBFooterTextCell.m; sourceTree = SOURCE_ROOT; };
+		17A981831ED396AF00EDDBEA /* TFUserDefaults.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TFUserDefaults.h; sourceTree = "<group>"; };
+		17A981841ED396AF00EDDBEA /* TFUserDefaults.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TFUserDefaults.m; sourceTree = "<group>"; };
 		29B97316FDCFA39411CA2CEA /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		29B97319FDCFA39411CA2CEA /* English */ = {isa = PBXFileReference; lastKnownFileType = wrapper.nib; name = English; path = English.lproj/MainMenu.nib; sourceTree = "<group>"; };
 		29B97324FDCFA39411CA2CEA /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
@@ -146,6 +149,8 @@
 			children = (
 				C9412A5D0D8AE98C00E9E614 /* MBTableGridController.h */,
 				C9412A5E0D8AE98C00E9E614 /* MBTableGridController.m */,
+				17A981831ED396AF00EDDBEA /* TFUserDefaults.h */,
+				17A981841ED396AF00EDDBEA /* TFUserDefaults.m */,
 			);
 			name = Classes;
 			sourceTree = "<group>";
@@ -398,6 +403,7 @@
 			files = (
 				8D11072D0486CEB800E47090 /* main.m in Sources */,
 				C9412A5F0D8AE98C00E9E614 /* MBTableGridController.m in Sources */,
+				17A981851ED396AF00EDDBEA /* TFUserDefaults.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
