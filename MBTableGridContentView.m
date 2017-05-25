@@ -54,6 +54,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 - (float)_widthForColumn:(NSUInteger)columnIndex;
 - (id)_backgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (id)_frozenBackgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+- (id)_groupSummaryBackgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (id)_textColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (MBTableGridEdge)_stickyColumn;
 - (MBTableGridEdge)_stickyRow;
@@ -61,7 +62,12 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 - (NSCell *)_footerCellForColumn:(NSUInteger)columnIndex;
 - (id)_footerValueForColumn:(NSUInteger)columnIndex;
 - (void)_setFooterValue:(id)value forColumn:(NSUInteger)columnIndex;
+- (BOOL)_isGroupHeadingRow:(NSUInteger)rowIndex;
+- (BOOL)_isGroupSummaryRow:(NSUInteger)rowIndex;
 - (BOOL)_isGroupRow:(NSUInteger)rowIndex;
+- (NSCell *)_groupSummaryCellForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+- (void)_updateGroupSummaryCell:(NSCell *)cell forColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+- (id)_groupSummaryValueForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 @end
 
 @interface MBTableGridContentView (Cursors)
@@ -162,14 +168,18 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 }
 
 - (void)cacheGroupRows {
-	if (!_groupRowIndexes) {
-		_groupRowIndexes = [NSMutableDictionary dictionary];
+	if (!_groupHeadingRowIndexes || !_groupSummaryRowIndexes) {
+        _groupHeadingRowIndexes = [NSMutableDictionary dictionary];
+		_groupSummaryRowIndexes = [NSMutableDictionary dictionary];
 		NSUInteger numberOfRows = [self tableGrid].numberOfRows;
 		NSUInteger row = 0;
 		while (row < numberOfRows) {
-			if ([[self tableGrid] _isGroupRow:row]) {
+            if ([[self tableGrid] _isGroupHeadingRow:row]) {
+                NSRect groupRowRect = [self rectOfRow:row];
+                _groupHeadingRowIndexes[@(row)] = [NSValue valueWithRect:groupRowRect];
+            } else if ([[self tableGrid] _isGroupSummaryRow:row]) {
 				NSRect groupRowRect = [self rectOfRow:row];
-				_groupRowIndexes[@(row)] = [NSValue valueWithRect:groupRowRect];
+				_groupSummaryRowIndexes[@(row)] = [NSValue valueWithRect:groupRowRect];
 			}
 			row++;
 		}
@@ -239,7 +249,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 	row = firstRow;
 	while (row <= lastRow) {
 
-		NSValue *rowRectValue = _groupRowIndexes[@(row)];
+		NSValue *rowRectValue = _groupHeadingRowIndexes[@(row)];
 		if (rowRectValue) {
 			NSRect rowFrame = [self rectOfRow:row];
             if (self != [self tableGrid].frozenContentView) {
@@ -259,10 +269,16 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 			column = firstColumn;
 			while (column <= lastColumn) {
 				NSRect cellFrame = [self frameOfCellAtColumn:column row:row];
-				// Only draw the cell if we need to
-				NSCell *_cell = [[self tableGrid] _cellForColumn:column];
+                NSCell *_cell = nil;
+                BOOL isGroupSummary = self.groupSummaryRowIndexes[@(row)] != nil;
 				
-				_cell.font = _defaultCellFont;
+                if (isGroupSummary) {
+                    _cell = [[self tableGrid] _groupSummaryCellForColumn:column row:row];
+                } else {
+                    _cell = [[self tableGrid] _cellForColumn:column];
+                }
+                
+                _cell.font = _defaultCellFont;
 				
 				// If we need to draw then check if we're a popup button. This may be a bit of
 				// a hack, but it seems to clear up the problem with the popup button clearing
@@ -277,6 +293,8 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 					
                     if ([[self tableGrid] isFrozenColumn:column]) {
                         backgroundColor = [[self tableGrid] _frozenBackgroundColorForColumn:column row:row] ?: [NSColor colorWithCalibratedWhite:0.97 alpha:1.0];
+                    } else if (isGroupSummary) {
+                        backgroundColor = [[self tableGrid] _groupSummaryBackgroundColorForColumn:column row:row] ?: [NSColor whiteColor];
                     }
                     
 					if (!_cell) {
@@ -289,7 +307,9 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 					id objectValue = nil;
                     BOOL isFrozenColumn = self != [self tableGrid].frozenContentView && [[self tableGrid] isFrozenColumn:column];
 					
-                    if (isFilling && [selectedColumns containsIndex:column] && [selectedRows containsIndex:row]) {
+                    if (isGroupSummary) {
+                        objectValue = [[self tableGrid] _groupSummaryValueForColumn:column row:row];
+                    } else if (isFilling && [selectedColumns containsIndex:column] && [selectedRows containsIndex:row]) {
 						objectValue = [[self tableGrid] _objectValueForColumn:mouseDownColumn row:mouseDownRow];
 					} else {
 						objectValue = [[self tableGrid] _objectValueForColumn:column row:row];
@@ -346,9 +366,20 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 						
 						[cell setTextColor:textColor];
 						
-						cell.accessoryButtonImage = [[self tableGrid] _accessoryButtonImageForColumn:column row:row];
-					
-
+                        if (isGroupSummary) {
+                            if (cell.objectValue != nil) {
+                                cell.title = cell.objectValue;
+                            }
+                            
+                            [[self tableGrid] _updateGroupSummaryCell:cell forColumn:column row:row];
+                        } else {
+                            cell.accessoryButtonImage = [[self tableGrid] _accessoryButtonImageForColumn:column row:row];
+                        }
+                        
+                        if (cell.font == nil) {
+                            cell.font = [NSFont systemFontOfSize:[NSFont systemFontSize]];
+                        }
+                        
 						[cell drawWithFrame:cellFrame inView:self withBackgroundColor:backgroundColor];// Draw background color
 						
 					}
@@ -490,7 +521,7 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 	mouseDownColumn = [self columnAtPoint:mouseLocationInContentView];
 	mouseDownRow = [self rowAtPoint:mouseLocationInContentView];
 	
-	if (_groupRowIndexes[@(mouseDownRow)]) {
+	if (_groupHeadingRowIndexes[@(mouseDownRow)] || _groupSummaryRowIndexes[@(mouseDownRow)]) {
 		mouseDownRow = NSNotFound;
 		return;
 	}
@@ -772,7 +803,11 @@ NSString * const MBTableGridTrackingPartKey = @"part";
 		[self addCursorRect:selectionRect cursor:[NSCursor arrowCursor]];
 		[self addCursorRect:[self visibleRect] cursor:[self _cellSelectionCursor]];
 		
-		[_groupRowIndexes enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+        [_groupHeadingRowIndexes enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+            NSRect rectOfRow = [self rectOfRow:[key integerValue]];
+            [self addCursorRect:rectOfRow cursor:[NSCursor arrowCursor]];
+        }];
+		[_groupSummaryRowIndexes enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
 			NSRect rectOfRow = [self rectOfRow:[key integerValue]];
 			[self addCursorRect:rectOfRow cursor:[NSCursor arrowCursor]];
 		}];

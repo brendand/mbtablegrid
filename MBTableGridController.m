@@ -29,9 +29,9 @@
 #import "MBButtonCell.h"
 #import "MBImageCell.h"
 #import "MBLevelIndicatorCell.h"
+#import "MBGroupSummaryCell.h"
 #import "MBFooterTextCell.h"
 #import "MBFooterPopupButtonCell.h"
-#import "TFUserDefaults.h"
 
 NSString* kAutosavedColumnWidthKey = @"AutosavedColumnWidth";
 NSString* kAutosavedColumnIndexKey = @"AutosavedColumnIndex";
@@ -55,12 +55,12 @@ NSString * const ColumnText4 = @"text4";
 @end
 
 @interface MBTableGridController()
-@property (nonatomic, strong) TFUserDefaults *documentDefaults;
 @property (nonatomic, strong) MBPopupButtonCell *popupCell;
 @property (nonatomic, strong) MBTableGridCell *textCell;
 @property (nonatomic, strong) MBButtonCell *checkboxCell;
 @property (nonatomic, strong) MBImageCell *imageCell;
 @property (nonatomic, strong) MBLevelIndicatorCell *ratingCell;
+@property (nonatomic, strong) MBGroupSummaryCell *groupSummaryCell;
 @property (nonatomic, strong) MBFooterTextCell *footerTextCell;
 @property (nonatomic, strong) MBFooterPopupButtonCell *footerPopupCell;
 @property (nonatomic, strong) NSDictionary *columnWidths;
@@ -71,8 +71,6 @@ NSString * const ColumnText4 = @"text4";
 
 - (void)awakeFromNib 
 {
-    self.documentDefaults = [TFUserDefaults new];
-    
     columnSampleWidths = @[@40, @50, @60, @70, @80, @90, @100, @110, @120, @130];
     
 	columns = [[NSMutableArray alloc] initWithCapacity:10];
@@ -81,9 +79,11 @@ NSString * const ColumnText4 = @"text4";
     
 	NSDictionary *infoDict = [[NSBundle mainBundle] infoDictionary];
 	NSString *gridComponentID = [infoDict objectForKey:@"GridComponentID"];
-
+    
+    [[NSUserDefaults standardUserDefaults] registerDefaults:@{@"MBTableGrid Group Summary Rows" : @YES}];
+    
 	tableGrid.autosaveName = [NSString stringWithFormat:@"MBTableGrid Columns records-table-%@", gridComponentID];
-    tableGrid.documentDefaults = self.documentDefaults;
+    tableGrid.defaultCellFont = [NSFont userFontOfSize:12.0];
     
 	NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
 	self.columnWidths = [defaults objectForKey:tableGrid.autosaveName];
@@ -98,11 +98,13 @@ NSString * const ColumnText4 = @"text4";
     
 	// Add 10 columns & rows
     [self tableGrid:tableGrid addColumns:10 shouldReload:NO];
-    [self tableGrid:tableGrid addRows:5000 shouldReload:NO];
+    [self tableGrid:tableGrid addRows:50 shouldReload:NO];
     
     [self tableGrid:tableGrid changeFrozenColumns:[defaults integerForKey:@"MBTableGrid Frozen Columns"] shouldReload:NO];
     [self tableGrid:tableGrid freezeColumns:[defaults boolForKey:@"MBTableGrid Freeze Columns"] shouldReload:NO];
 	
+    [self tableGrid:tableGrid includeGroupSummaryRows:[defaults boolForKey:@"MBTableGrid Group Summary Rows"] shouldReload:NO];
+    
 	[tableGrid setSortAscendingImage:[NSImage imageNamed:@"sort-asc"] sortDescendingImage:[NSImage imageNamed:@"sort-desc"] sortUndeterminedImage:nil];
 	
 	[tableGrid reloadData];
@@ -135,6 +137,8 @@ NSString * const ColumnText4 = @"text4";
 	self.ratingCell = [[MBLevelIndicatorCell alloc] initWithLevelIndicatorStyle:NSRatingLevelIndicatorStyle];
 	self.ratingCell.editable = YES;
 	
+    self.groupSummaryCell = [[MBGroupSummaryCell alloc] initTextCell:@""];
+    
     self.footerTextCell = [[MBFooterTextCell alloc] initTextCell:@""];
     
     self.footerPopupCell = [[MBFooterPopupButtonCell alloc] initTextCell:@""];
@@ -176,6 +180,8 @@ NSString * const ColumnText4 = @"text4";
         menuItem.state = menuItem.tag == tableGrid.numberOfFrozenColumns;
     } else if (action == @selector(freezeColumns:)) {
         menuItem.state = tableGrid.freezeColumns;
+    } else if (action == @selector(includeGroupSummaryRows:)) {
+        menuItem.state = tableGrid.includeGroupSummaryRows;
     }
     
     return enabled;
@@ -371,13 +377,6 @@ NSString * const ColumnText4 = @"text4";
         return [NSColor colorWithDeviceWhite:0.96 alpha:1.000];
 }
 
-- (BOOL)tableGrid:(MBTableGrid *)aTableGrid isGroupRow:(NSUInteger)rowIndex {
-	if (rowIndex == 0 || rowIndex == 5) {
-		return YES;
-	}
-	return NO;
-}
-
 - (MBSortDirection)tableGrid:(MBTableGrid *)aTableGrid sortDirectionForColumn:(NSUInteger)columnIndex {
 	if (columnIndex == 1) {
 		return MBSortAscending;
@@ -386,6 +385,97 @@ NSString * const ColumnText4 = @"text4";
 	} else {
 		return MBSortUndetermined;
 	}
+}
+
+#pragma mark Group
+
+- (BOOL)tableGrid:(MBTableGrid *)aTableGrid isGroupRow:(NSUInteger)rowIndex {
+	if (rowIndex == 0 || rowIndex == 5) {
+		return YES;
+	}
+	return NO;
+}
+
+- (id)valueForTableGrid:(MBTableGrid *)aTableGrid groupSummaryColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+{
+    NSUInteger footerItem = [[NSUserDefaults standardUserDefaults] integerForKey:[self footerDefaultsKeyForColumn:columnIndex]];
+    NSUInteger headingIndex = [aTableGrid groupHeadingRowForRow:rowIndex];
+    
+    if (headingIndex == NSNotFound) {
+        return nil;
+    }
+    
+    NSRange range = NSMakeRange(headingIndex + 1, rowIndex - headingIndex - 1);
+    NSArray *column = [columns[columnIndex] subarrayWithRange:range];
+    NSPredicate *predicate = [NSPredicate predicateWithFormat:@"self != ''"];
+    NSArray *group = [column filteredArrayUsingPredicate:predicate];
+    
+    switch (footerItem) {
+        case 0:
+            return [group valueForKeyPath:@"@sum.floatValue"];
+            break;
+        case 1:
+            return [group valueForKeyPath:@"@min.floatValue"];
+            break;
+        case 2:
+            return [group valueForKeyPath:@"@max.floatValue"];
+            break;
+        case 3:
+            return [group valueForKeyPath:@"@avg.floatValue"];
+            break;
+        default:
+            return [group valueForKeyPath:@"@count"];
+            break;
+    }
+}
+
+- (NSCell *)tableGrid:(MBTableGrid *)aTableGrid groupSummaryCellForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+{
+    return self.groupSummaryCell;
+}
+
+- (void)tableGrid:(MBTableGrid *)aTableGrid updateGroupSummaryCell:(MBGroupSummaryCell *)cell forColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+{
+    // Cell defaults have been set; this is an opportunity to update the cell to override the font, color, etc
+    cell.font = [NSFont boldSystemFontOfSize:12.0];
+    
+    id value = [self valueForTableGrid:aTableGrid groupSummaryColumn:columnIndex row:rowIndex];
+    
+    if ([value integerValue] < 0) {
+        cell.textColor = [NSColor redColor];
+    }
+}
+
+- (id)tableGrid:(MBTableGrid *)aTableGrid groupSummaryValueForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+{
+    if (columnIndex >= [columns count]) {
+        return nil;
+    }
+    
+    id value = nil;
+    NSString *columnIdentifier = self.columnIdentifiers[columnIndex];
+    
+    if (columnIdentifier == ColumnDate || columnIdentifier == ColumnPopup || columnIdentifier == ColumnCheckbox || columnIdentifier == ColumnImage || columnIdentifier == ColumnRating) {
+        // Date, popup, checkbox, image, rating: nothing to show
+        value = nil;
+    } else {
+        // All others: the Total, Average, etc, as chosen in the footer popup
+        NSUInteger footerItem = [[NSUserDefaults standardUserDefaults] integerForKey:[self footerDefaultsKeyForColumn:columnIndex]];
+        
+        value = [self valueForTableGrid:aTableGrid groupSummaryColumn:columnIndex row:rowIndex];
+        
+        if (value == nil) {
+            return nil;
+        }
+        
+        if (footerItem == 4) {
+            value = [NSString stringWithFormat:@"%li", [value integerValue]];
+        } else {
+            value = [self formattedPrefix:nil value:value forTableGrid:aTableGrid column:columnIndex];
+        }
+    }
+    
+    return value;
 }
 
 #pragma mark Footer
@@ -405,7 +495,11 @@ NSString * const ColumnText4 = @"text4";
         value = [NSString stringWithFormat:@"%.0f", [value floatValue]];
     }
     
-    return [NSString stringWithFormat:@"%@: %@", prefix, value];
+    if (prefix.length) {
+        return [NSString stringWithFormat:@"%@: %@", prefix, value];
+    } else {
+        return value;
+    }
 }
 
 - (NSString *)footerDefaultsKeyForColumn:(NSUInteger)columnIndex;
@@ -777,6 +871,15 @@ NSString * const ColumnText4 = @"text4";
     return YES;
 }
 
+- (void)tableGrid:(MBTableGrid *)aTableGrid includeGroupSummaryRows:(BOOL)includeGroupSummaryRows shouldReload:(BOOL)shouldReload;
+{
+    aTableGrid.includeGroupSummaryRows = includeGroupSummaryRows;
+    
+    if (shouldReload) {
+        [aTableGrid reloadData];
+    }
+}
+
 #pragma mark MBTableGridDelegate
 
 - (void)tableGridDidMoveRows:(NSNotification *)aNotification
@@ -799,6 +902,16 @@ NSString * const ColumnText4 = @"text4";
 - (void)tableGrid:(MBTableGrid *)aTableGrid didAddRows:(NSIndexSet *)rowIndexes;
 {
     // Add the rows to the database, or whatever is needed
+}
+
+- (NSDictionary *)tableGridAutosavedColumnProperties:(MBTableGrid *)aTableGrid;
+{
+    return [[NSUserDefaults standardUserDefaults] objectForKey:aTableGrid.autosaveName];
+}
+
+- (void)tableGrid:(MBTableGrid *)aTableGrid didAutosaveColumnProperties:(NSDictionary *)columnProperties;
+{
+    [[NSUserDefaults standardUserDefaults] setObject:columnProperties forKey:aTableGrid.autosaveName];
 }
 
 #pragma mark - QuickLook
@@ -902,6 +1015,15 @@ NSString * const ColumnText4 = @"text4";
     [self tableGrid:tableGrid freezeColumns:freeze shouldReload:YES];
     
     [[NSUserDefaults standardUserDefaults] setBool:freeze forKey:@"MBTableGrid Freeze Columns"];
+}
+
+- (IBAction)includeGroupSummaryRows:(id)sender {
+    NSMenuItem *item = sender;
+    BOOL include = !item.state;
+    
+    [self tableGrid:tableGrid includeGroupSummaryRows:include shouldReload:YES];
+    
+    [[NSUserDefaults standardUserDefaults] setBool:include forKey:@"MBTableGrid Group Summary Rows"];
 }
 
 @end

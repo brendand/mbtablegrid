@@ -80,6 +80,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 - (float)_setWidthForColumn:(NSUInteger)columnIndex;
 - (id)_backgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (id)_frozenBackgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+- (id)_groupSummaryBackgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (id)_textColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (BOOL)_canEditCellAtColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 - (BOOL)_canFillCellAtColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
@@ -87,6 +88,8 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 - (NSCell *)_footerCellForColumn:(NSUInteger)columnIndex;
 - (id)_footerValueForColumn:(NSUInteger)columnIndex;
 - (void)_setFooterValue:(id)value forColumn:(NSUInteger)columnIndex;
+- (BOOL)_isGroupHeadingRow:(NSUInteger)rowIndex;
+- (BOOL)_isGroupSummaryRow:(NSUInteger)rowIndex;
 - (BOOL)_isGroupRow:(NSUInteger)rowIndex;
 - (MBSortDirection)_sortDirectionForColumn:(NSUInteger)columnIndex;
 - (void)_fillInColumn:(NSUInteger)column fromRow:(NSUInteger)row numberOfRowsWhenStarting:(NSUInteger)numberOfRowsWhenStartingFilling;
@@ -126,7 +129,9 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	if (self = [super initWithFrame:frameRect]) {
 		columnWidths = [NSMutableDictionary dictionary];
 		columnIndexNames = [NSMutableArray array];
-
+        
+        self.includeGroupSummaryRows = YES;
+        
 		// Post frame changed notifications
 		[self setPostsFrameChangedNotifications:YES];
 		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(viewFrameDidChange:) name:NSViewFrameDidChangeNotification object:self];
@@ -143,12 +148,10 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 		columnHeaderScrollView = [[NSScrollView alloc] initWithFrame:columnHeaderFrame];
 		columnHeaderView = [[MBTableGridHeaderView alloc] initWithFrame:NSMakeRect(0, 0, columnHeaderFrame.size.width, columnHeaderFrame.size.height)];
-		columnHeaderView.documentDefaults = self.documentDefaults;
 		
 		//	[columnHeaderView setAutoresizingMask:NSViewWidthSizable];
 		[columnHeaderView setOrientation:MBTableHeaderHorizontalOrientation];
         frozenColumnHeaderView = [[MBTableGridHeaderView alloc] initWithFrame:NSMakeRect(0, 0, 0, columnHeaderFrame.size.height)];
-		frozenColumnHeaderView.documentDefaults = self.documentDefaults;
 		
         [frozenColumnHeaderView setOrientation:MBTableHeaderHorizontalOrientation];
 		[columnHeaderScrollView setDocumentView:columnHeaderView];
@@ -162,7 +165,6 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		NSRect rowHeaderFrame = NSMakeRect(0, MBTableGridColumnHeaderHeight, MBTableGridRowHeaderWidth, [self frame].size.height - MBTableGridColumnHeaderHeight * 2);
 		rowHeaderScrollView = [[NSScrollView alloc] initWithFrame:rowHeaderFrame];
 		rowHeaderView = [[MBTableGridHeaderView alloc] initWithFrame:NSMakeRect(0, 0, rowHeaderFrame.size.width, rowHeaderFrame.size.height)];
-		rowHeaderView.documentDefaults = self.documentDefaults;
 		
 		//[rowHeaderView setAutoresizingMask:NSViewHeightSizable];
 		[rowHeaderView setOrientation:MBTableHeaderVerticalOrientation];
@@ -1699,8 +1701,10 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
     
     [self updateShadows];
     
-	contentView.groupRowIndexes = nil;
-	frozenContentView.groupRowIndexes = nil;
+	contentView.groupHeadingRowIndexes = nil;
+    contentView.groupSummaryRowIndexes = nil;
+    frozenContentView.groupHeadingRowIndexes = nil;
+	frozenContentView.groupSummaryRowIndexes = nil;
     
 	[self setNeedsDisplay:YES];
 }
@@ -1785,6 +1789,18 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		row++;
 	}
 	return NSNotFound;
+}
+
+- (NSInteger)groupHeadingRowForRow:(NSInteger)rowIndex {
+    while (rowIndex >= 0 && ![self _isGroupHeadingRow:rowIndex]) {
+        rowIndex--;
+    }
+    
+    if (rowIndex < 0) {
+        return NSNotFound;
+    } else {
+        return rowIndex;
+    }
 }
 
 #pragma mark Auxiliary Views
@@ -2195,6 +2211,13 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	return nil;
 }
 
+- (id)_groupSummaryBackgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
+    if ([[self dataSource] respondsToSelector:@selector(tableGrid:groupSummaryBackgroundColorForColumn:row:)]) {
+        return [[self dataSource] tableGrid:self groupSummaryBackgroundColorForColumn:columnIndex row:rowIndex];
+    }
+    return nil;
+}
+
 - (id)_textColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
 	if ([[self dataSource] respondsToSelector:@selector(tableGrid:textColorForColumn:row:)]) {
 		return [[self dataSource] tableGrid:self textColorForColumn:columnIndex row:rowIndex];
@@ -2344,13 +2367,48 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	}
 }
 
-- (BOOL)_isGroupRow:(NSUInteger)rowIndex {
-	// Ask the delegate if the cell is a group row
+- (BOOL)_isGroupHeadingRow:(NSUInteger)rowIndex {
+	// Ask the data source if the cell is a group (heading) row
 	if ([[self dataSource] respondsToSelector:@selector(tableGrid:isGroupRow:)]) {
 		return [[self dataSource] tableGrid:self isGroupRow:rowIndex];
 	}
 	
 	return NO;
+}
+
+- (BOOL)_isGroupSummaryRow:(NSUInteger)rowIndex {
+    if (!self.includeGroupSummaryRows) {
+        return NO;
+    } else if (rowIndex == [[self dataSource] numberOfRowsInTableGrid:self] - 1) {
+        return YES;
+    } else {
+        return rowIndex > 0 && [self _isGroupHeadingRow:rowIndex + 1];
+    }
+}
+
+- (BOOL)_isGroupRow:(NSUInteger)rowIndex {
+    return [self _isGroupHeadingRow:rowIndex] || [self _isGroupSummaryRow:rowIndex];
+}
+
+- (NSCell *)_groupSummaryCellForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
+    if ([[self dataSource] respondsToSelector:@selector(tableGrid:groupSummaryCellForColumn:row:)]) {
+        return [[self dataSource] tableGrid:self groupSummaryCellForColumn:columnIndex row:rowIndex];
+    }
+    return nil;
+}
+
+- (void)_updateGroupSummaryCell:(NSCell *)cell forColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
+    if ([[self dataSource] respondsToSelector:@selector(tableGrid:updateGroupSummaryCell:forColumn:row:)]) {
+        [[self dataSource] tableGrid:self updateGroupSummaryCell:cell forColumn:columnIndex row:rowIndex];
+    }
+}
+
+- (id)_groupSummaryValueForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
+    if ([[self dataSource] respondsToSelector:@selector(tableGrid:groupSummaryValueForColumn:row:)]) {
+        id value = [[self dataSource] tableGrid:self groupSummaryValueForColumn:columnIndex row:rowIndex];
+        return value;
+    }
+    return nil;
 }
 
 - (NSColor *)_tagColorForRow:(NSUInteger)rowIndex {

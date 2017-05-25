@@ -141,8 +141,8 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 		NSUInteger rowNumber = 0;
 		while(row < numberOfRows) {
 			NSRect headerRect = [self headerRectOfRow:row];
-			BOOL isGroupRow = [[[[self tableGrid] contentView] groupRowIndexes] objectForKey:@(row)] != nil;
-
+            BOOL isGroupRow = [[[[self tableGrid] contentView] groupHeadingRowIndexes] objectForKey:@(row)] != nil || [[[[self tableGrid] contentView] groupSummaryRowIndexes] objectForKey:@(row)] != nil;
+            
 			// Only draw the header if we need to
 			if ([self needsToDrawRect:headerRect]) {
                 
@@ -262,7 +262,7 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 								NSInteger rowCount = [self tableGrid].numberOfRows;
 								
 								for (NSInteger row = 0; row < rowCount; row++) {
-									BOOL isGroupRow = [[[[self tableGrid] contentView] groupRowIndexes] objectForKey:@(row)] != nil;
+									BOOL isGroupRow = [[[[self tableGrid] contentView] groupHeadingRowIndexes] objectForKey:@(row)] != nil;
 									if (!isGroupRow) {
 										[indexSet addIndex:row];
 									}
@@ -427,7 +427,7 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 				
 				NSInteger rowCount = [self tableGrid].numberOfRows;
 				for (NSInteger row = 0; row < rowCount; row++) {
-					BOOL isGroupRow = [[[[self tableGrid] contentView] groupRowIndexes] objectForKey:@(row)] != nil;
+					BOOL isGroupRow = [[[[self tableGrid] contentView] groupHeadingRowIndexes] objectForKey:@(row)] != nil;
 					if (!isGroupRow) {
 						[indexSet addIndex:row];
 					}
@@ -490,6 +490,10 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 }
 
 - (void)autoSaveColumnProperties {
+    if (!columnAutoSaveProperties && [[[self tableGrid] delegate] respondsToSelector:@selector(tableGridAutosavedColumnProperties:)]) {
+        columnAutoSaveProperties = [[[[self tableGrid] delegate] tableGridAutosavedColumnProperties:[self tableGrid]] mutableCopy];
+    }
+    
 	if (!columnAutoSaveProperties) {
 		columnAutoSaveProperties = [NSMutableDictionary dictionary];
 	}
@@ -502,8 +506,8 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 		columnAutoSaveProperties[[NSString stringWithFormat:@"C-%@", key]] = columnDict;
 	}];
 	
-	if (self.autosaveName) {
-		[self.documentDefaults setObject:columnAutoSaveProperties.mutableCopy forKey:self.autosaveName];
+	if (self.autosaveName && [[[self tableGrid] delegate] respondsToSelector:@selector(tableGrid:didAutosaveColumnProperties:)]) {
+        [[[self tableGrid] delegate] tableGrid:[self tableGrid] didAutosaveColumnProperties:columnAutoSaveProperties.mutableCopy];
 	}
 }
 

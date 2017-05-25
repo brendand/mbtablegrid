@@ -25,7 +25,6 @@
 
 #import <Cocoa/Cocoa.h>
 #import <QuartzCore/QuartzCore.h>
-#import "TFUserDefaults.h"
 
 typedef enum : NSUInteger {
 	MBSortNone,
@@ -164,8 +163,6 @@ typedef enum {
 
 #pragma mark -
 #pragma mark Reloading the Grid
-
-@property (nonatomic, weak) TFUserDefaults *documentDefaults;
 
 /**
  * @name		Reloading the Grid
@@ -459,6 +456,14 @@ typedef enum {
 @property (nonatomic) BOOL freezeColumns;
 
 /**
+ * @brief		Whether or not summary rows should be displayed for groups, providing subtotals of the groups.
+ *
+ * @return		Whether or not summary rows should be displayed for groups.
+ */
+
+@property (nonatomic) BOOL includeGroupSummaryRows;
+
+/**
  * @}
  */
 
@@ -630,6 +635,15 @@ typedef enum {
 - (NSInteger)rowAtPoint:(NSPoint)aPoint;
 
 /**
+ * @brief		Returns the index of the group heading row for a given row.
+ *
+ * @param		rowIndex	The index of a row.
+ *
+ * @return		The index of the group heading that contains the row, or \c NSNotFound if there are no group headings before this row.
+ */
+- (NSInteger)groupHeadingRowForRow:(NSInteger)rowIndex;
+
+/**
  * @}
  */
 
@@ -755,6 +769,14 @@ typedef enum {
 /**
  * @}
  */
+
+@end
+
+#pragma mark -
+
+@protocol MBTableGridPopupMenu <NSObject>
+
+- (void)cellPopupMenuItemSelected:(NSMenuItem *)menuItem;
 
 @end
 
@@ -924,6 +946,17 @@ typedef enum {
  */
 - (NSColor *)tableGrid:(MBTableGrid *)aTableGrid frozenBackgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 
+/**
+ * @brief		Returns the group summary background color for the specified column and row.
+ *
+ * @param		aTableGrid		The table grid that sent the message.
+ * @param		columnIndex		A column in \c aTableGrid.
+ * @param		rowIndex		A row in \c aTableGrid.
+ *
+ * @return		The group summary background color for the specified cell of the view.
+ */
+- (NSColor *)tableGrid:(MBTableGrid *)aTableGrid groupSummaryBackgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+
 @optional
 
 /**
@@ -979,6 +1012,18 @@ typedef enum {
 - (float)tableGrid:(MBTableGrid *)aTableGrid setWidthForColumn:(NSUInteger)columnIndex;
 
 /**
+ *  @brief      Asks the delegate for the tag color to be displayed on the very left of the specified row
+ *
+ *  @param      aTableGrid       The table grid that contains the cell.
+ *  @param      rowIndexes       Row indexes of the cells being copied.
+ */
+- (NSColor *)tableGrid:(MBTableGrid *)aTableGrid tagColorForRow:(NSUInteger)rowIndex;
+
+#pragma mark Group
+
+@optional
+
+/**
  *  @brief      Asks the delegate if the specified row is a group row. A group row has only one cell
  *              that spans across the entire row.
  *
@@ -988,13 +1033,44 @@ typedef enum {
 - (BOOL)tableGrid:(MBTableGrid *)aTableGrid isGroupRow:(NSUInteger)rowIndex;
 
 /**
- *  @brief      Asks the delegate for the tag color to be displayed on the very left of the specified row
+ *  @brief      Returns the cell for the group summary of the specified column & row.
  *
- *  @param      aTableGrid       The table grid that contains the cell.
- *  @param      rowIndexes       Row indexes of the cells being copied.
+ * @details		Optional; if not implemented, or returns nil, an empty summary is
+ *				displayed for this column & row.
+ *
+ *  @param      aTableGrid      The table grid that sent the message.
+ *  @param      columnIndex     A column in \c aTableGrid.
+ *  @param		rowIndex		A row in \c aTableGrid.
+ *
+ *  @return     The summary cell for the specified column & row.
  */
-- (NSColor *)tableGrid:(MBTableGrid *)aTableGrid tagColorForRow:(NSUInteger)rowIndex;
+- (NSCell *)tableGrid:(MBTableGrid *)aTableGrid groupSummaryCellForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 
+/**
+ *  @brief      A chance to update the cell for the group summary of the specified column & row.
+ *
+ * @details		Optional; if not implemented, the summary uses default attributes.
+ *
+ *  @param      aTableGrid      The table grid that sent the message.
+ *  @param      cell            The summary cell for the specified column & row.
+ *  @param      columnIndex     A column in \c aTableGrid.
+ *  @param		rowIndex		A row in \c aTableGrid.
+ */
+- (void)tableGrid:(MBTableGrid *)aTableGrid updateGroupSummaryCell:(NSCell *)cell forColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
+
+/**
+ * @brief		Returns the data object for the group summary of the specified column & row.
+ *
+ * @details		Optional; if not implemented, or returns nil, an empty summary is
+ *				displayed for this column & row.
+ *
+ * @param		aTableGrid		The table grid that sent the message.
+ * @param		columnIndex		A column in \c aTableGrid.
+ * @param		rowIndex		A row in \c aTableGrid.
+ *
+ * @return		The object for the specified summary of the view.
+ */
+- (id)tableGrid:(MBTableGrid *)aTableGrid groupSummaryValueForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex;
 
 /**
  * @}
@@ -1560,5 +1636,23 @@ typedef enum {
  * @param		aTableGrid		The table grid object.
  */
 - (NSUndoManager *)undoManagerForTableGrid:(MBTableGrid *)aTableGrid;
+
+#pragma mark Autosaving
+
+/**
+ * @brief		Asks the delegate for the previously autosaved column properties.
+ *
+ * @param		aTableGrid          The table grid object asking the delegate.
+ * @return      The column properties that were autosaved.
+ */
+- (NSDictionary *)tableGridAutosavedColumnProperties:(MBTableGrid *)aTableGrid;
+
+/**
+ * @brief		Tells the delegate that the column properties was autosaved.
+ *
+ * @param		aTableGrid          The table grid object informing the delegate.
+ * @param		columnProperties	The column properties being autosaved.
+ */
+- (void)tableGrid:(MBTableGrid *)aTableGrid didAutosaveColumnProperties:(NSDictionary *)columnProperties;
 
 @end

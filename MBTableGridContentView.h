@@ -97,7 +97,8 @@ typedef NS_ENUM(NSUInteger, MBTableGridTrackingPart)
 /**
  * @brief		A cached set of row indexes to determine which rows are "group" rows
  */
-@property (nonatomic, strong) NSMutableDictionary *groupRowIndexes;
+@property (nonatomic, strong) NSMutableDictionary *groupHeadingRowIndexes;
+@property (nonatomic, strong) NSMutableDictionary *groupSummaryRowIndexes;
 
 /**
  * @brief		sets the default font for the rows
