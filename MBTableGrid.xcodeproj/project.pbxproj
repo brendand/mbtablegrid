@@ -17,6 +17,8 @@
 		8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C165CFE840E0CC02AAC07 /* InfoPlist.strings */; };
 		8D11072D0486CEB800E47090 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; settings = {ATTRIBUTES = (); }; };
 		8D11072F0486CEB800E47090 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
+		C621B22E24C21CA500C19D83 /* MBAutoCompleteWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = C621B22C24C21CA400C19D83 /* MBAutoCompleteWindow.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		C621B22F24C21CA500C19D83 /* MBAutoCompleteWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = C621B22D24C21CA400C19D83 /* MBAutoCompleteWindow.m */; };
 		C63413B61A19F857001E9DF0 /* MBLevelIndicatorCell.h in Headers */ = {isa = PBXBuildFile; fileRef = C63413B41A19F857001E9DF0 /* MBLevelIndicatorCell.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		C63413B71A19F857001E9DF0 /* MBLevelIndicatorCell.m in Sources */ = {isa = PBXBuildFile; fileRef = C63413B51A19F857001E9DF0 /* MBLevelIndicatorCell.m */; };
 		C639542C19FF3B7C0029BDF1 /* MBPopupButtonCell.h in Headers */ = {isa = PBXBuildFile; fileRef = C639542A19FF3B7C0029BDF1 /* MBPopupButtonCell.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -77,6 +79,8 @@
 		6593B7411AA37B6200BE9726 /* nl */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = nl; path = nl.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		8D1107310486CEB800E47090 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		8D1107320486CEB800E47090 /* MBTableGrid.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MBTableGrid.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C621B22C24C21CA400C19D83 /* MBAutoCompleteWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MBAutoCompleteWindow.h; sourceTree = SOURCE_ROOT; };
+		C621B22D24C21CA400C19D83 /* MBAutoCompleteWindow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MBAutoCompleteWindow.m; sourceTree = SOURCE_ROOT; };
 		C63413B41A19F857001E9DF0 /* MBLevelIndicatorCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MBLevelIndicatorCell.h; sourceTree = SOURCE_ROOT; };
 		C63413B51A19F857001E9DF0 /* MBLevelIndicatorCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MBLevelIndicatorCell.m; sourceTree = SOURCE_ROOT; };
 		C639542A19FF3B7C0029BDF1 /* MBPopupButtonCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MBPopupButtonCell.h; sourceTree = SOURCE_ROOT; };
@@ -239,6 +243,8 @@
 			children = (
 				C9412A3D0D8A061C00E9E614 /* MBTableGrid.h */,
 				C9412A3E0D8A061C00E9E614 /* MBTableGrid.m */,
+				C621B22C24C21CA400C19D83 /* MBAutoCompleteWindow.h */,
+				C621B22D24C21CA400C19D83 /* MBAutoCompleteWindow.m */,
 				C9412B200D8B2C5E00E9E614 /* MBTableGridContentView.h */,
 				C9412B210D8B2C5E00E9E614 /* MBTableGridContentView.m */,
 				C6BF26881A4AC502008EB93F /* MBTableGridFooterView.h */,
@@ -293,6 +299,7 @@
 				C6BF268B1A4AC953008EB93F /* MBFooterPopupButtonCell.h in Headers */,
 				C639543019FF84FA0029BDF1 /* MBButtonCell.h in Headers */,
 				CA46E3621A09726A00C43B4B /* MBTableGridEditable.h in Headers */,
+				C621B22E24C21CA500C19D83 /* MBAutoCompleteWindow.h in Headers */,
 				C639542C19FF3B7C0029BDF1 /* MBPopupButtonCell.h in Headers */,
 				C6AB1C261A15C3AB0092B29C /* MBImageCell.h in Headers */,
 				C63413B61A19F857001E9DF0 /* MBLevelIndicatorCell.h in Headers */,
@@ -358,6 +365,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 1;
 			knownRegions = (
+				English,
 				en,
 				nl,
 			);
@@ -417,6 +425,7 @@
 				C6BF26871A4AC4EE008EB93F /* MBTableGridFooterView.m in Sources */,
 				E2E62BBB1781C37600F36275 /* MBTableGridContentView.m in Sources */,
 				C6AB1C271A15C3AB0092B29C /* MBImageCell.m in Sources */,
+				C621B22F24C21CA500C19D83 /* MBAutoCompleteWindow.m in Sources */,
 				E2E62BBC1781C37800F36275 /* MBTableGridHeaderView.m in Sources */,
 				172FFBFC1D8B554A0077699F /* MBTableGridShadowView.m in Sources */,
 				173D292E1AA1779F009945FC /* MBFooterTextCell.m in Sources */,

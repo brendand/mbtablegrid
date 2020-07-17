@@ -86,12 +86,22 @@ APPKIT_EXTERN NSString *MBTableGridRowDataType;
  */
 APPKIT_EXTERN CGFloat MBTableGridContentViewPadding;
 
-typedef enum {
+typedef NS_ENUM(NSInteger, MBTableGridEdge) {
 	MBTableGridLeftEdge		= 0,
 	MBTableGridRightEdge	= 1,
 	MBTableGridTopEdge		= 3,
 	MBTableGridBottomEdge	= 4
-} MBTableGridEdge;
+};
+
+typedef NS_ENUM(NSUInteger, MBHorizontalEdge) {
+	MBHorizontalEdgeLeft,
+	MBHorizontalEdgeRight
+};
+
+typedef NS_ENUM(NSUInteger, MBVerticalEdge) {
+	MBVerticalEdgeTop,
+	MBVerticalEdgeBottom
+};
 
 /**
  * @brief		MBTableGrid (sometimes referred to as a table grid)
@@ -226,6 +236,15 @@ typedef enum {
  */
 - (void)selectRow:(NSUInteger)rowIndex column:(NSUInteger)columnIndex;
 
+/**
+ * @brief		Double-clicks the specified row or column
+ *
+ * @param		rowIndex		The row to select
+ * @param		columnIndex		The column to select
+ *
+ */
+- (void)doubleClickRow:(NSUInteger)rowIndex;
+- (void)doubleClickColumn:(NSUInteger)columnIndex;
 
 /**
  * @brief		Moves the selection down one row
@@ -411,6 +430,17 @@ typedef enum {
  */
 @property(assign) BOOL allowsMultipleSelection;
 
+/**
+ * @brief		Indicates whether the receiver is enabled
+ *
+ * @details		The default is \c YES.
+ *
+ * @return		\c YES if the receiver allows the user
+ *				to select any rows.
+ *				Otherwise, \c NO.
+ */
+@property(assign, nonatomic) BOOL isEditable;
+
 
 /**
  * @brief		Sets the default font to use for content cells
@@ -462,6 +492,14 @@ typedef enum {
  */
 
 @property (nonatomic) BOOL includeGroupSummaryRows;
+
+/**
+ * @brief		Whether or not ONLY summary rows should be displayed for groups, providing subtotals of the groups.
+ *
+ * @return		Whether or not summary rows should be displayed for groups.
+ */
+
+@property (nonatomic) BOOL includeOnlyGroupSummaryRows;
 
 /**
  * @}
@@ -1486,6 +1524,25 @@ typedef enum {
  * @see			tableGrid:willSelectColumnsAtIndexPath:
  */
 - (void)tableGrid:(MBTableGrid *)aTableGrid didDoubleClickColumn:(NSUInteger)columnIndex;
+
+/**
+ * @brief		Tells the delegate that the specified row header was double-clicked
+ *
+ * @param		aTableGrid		The table grid object informing the delegate
+ *								about the double-click event
+ * @param		columnIndex		The selected row in \c aTableGrid.
+ */
+- (void)tableGrid:(MBTableGrid *)aTableGrid didDoubleClickRow:(NSUInteger)rowIndex;
+
+/**
+* @ brief		Tells the delegate that the separator between column with index 'columnIndex' and that with 'columnIndex + 1' was double-clicked.
+*
+* @param		aTableGrid		The table grid object informing the delegate
+*								about the double-click event
+* @param		columnIndex		The selected column in \c aTableGrid.
+*/
+- (void)tableGrid:(MBTableGrid *)aTableGrid didDoubleClickSeparatorForColumn:(NSUInteger)columnIndex;
+
 
 /**
  * @brief		Called when the sort indicator button is clicked

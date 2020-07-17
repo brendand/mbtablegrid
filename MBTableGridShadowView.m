@@ -17,8 +17,12 @@
     NSColor *endingColor = [NSColor colorWithWhite:0.5 alpha:0.0];
     
     NSGradient *gradient = [[NSGradient alloc] initWithStartingColor:startingColor endingColor:endingColor];
-    
-    [gradient drawInRect:self.bounds angle:self.orientation == MBTableHeaderHorizontalOrientation ? 90.0 : 0.0];
+	
+//	if ([[NSApplication sharedApplication] userInterfaceLayoutDirection] == NSUserInterfaceLayoutDirectionRightToLeft) {
+//		[gradient drawInRect:self.bounds angle:self.orientation == MBTableHeaderHorizontalOrientation ? 90.0 : 180.0];
+//	} else {
+		[gradient drawInRect:self.bounds angle:self.orientation == MBTableHeaderHorizontalOrientation ? 90.0 : 0.0];
+//	}
 }
 
 - (BOOL)isFlipped

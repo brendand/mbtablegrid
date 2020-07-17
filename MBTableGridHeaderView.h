@@ -50,7 +50,6 @@
     NSUInteger draggingColumnIndex;
 	
 	NSMutableDictionary *_groupRowIndexes;
-	NSMutableDictionary *columnAutoSaveProperties;
 	
 }
 
@@ -81,7 +80,7 @@
 /**
  * @brief		The orientation of the receiver.
  */
-@property MBTableGridHeaderOrientation orientation;
+@property (nonatomic) MBTableGridHeaderOrientation orientation;
 
 /**
  * @brief		The ascending sort indicator image for the header cell
@@ -103,6 +102,26 @@
  */
 @property (nonatomic) NSString *autosaveName;
 
+/**
+ * @brief		Sets the default font to use for content cells
+ *
+ */
+@property(nonatomic, strong) NSFont *defaultCellFont;
+
+
+/**
+ * @brief		Indicates whether the receiver is enabled
+ *
+ * @details		The default is \c YES.
+ *
+ * @return		\c YES if the receiver allows the user
+ *				to select any rows.
+ *				Otherwise, \c NO.
+ */
+@property(nonatomic) BOOL isEditable;
+
+
+@property (nonatomic, strong) NSMutableDictionary *columnAutoSaveProperties;
 
 /**
  * @}

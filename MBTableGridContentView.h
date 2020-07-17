@@ -27,7 +27,7 @@
 
 #define MBTableGridColumnHeaderHeight 19.0
 #define MBTableGridColumnHeaderWidth 60
-#define MBTableGridRowHeaderWidth 40.0
+#define MBTableGridRowHeaderWidth 50.0
 #define COLUMNFLOATSIZE(x) [NSNumber numberWithFloat:x]
 #define COLUMNKEY(idx) [NSString stringWithFormat:@"column%lu",idx]
 
@@ -104,6 +104,19 @@ typedef NS_ENUM(NSUInteger, MBTableGridTrackingPart)
  * @brief		sets the default font for the rows
  */
 @property (nonatomic, strong) NSFont *defaultCellFont;
+
+/**
+ * @brief		Indicates whether the receiver is enabled
+ *
+ * @details		The default is \c YES.
+ *
+ * @return		\c YES if the receiver allows the user
+ *				to select any rows.
+ *				Otherwise, \c NO.
+ */
+@property(assign, nonatomic) BOOL isEditable;
+
+@property (nonatomic, assign) CGFloat cellRowHeight;
 
 /**
  * @}
@@ -198,5 +211,7 @@ typedef NS_ENUM(NSUInteger, MBTableGridTrackingPart)
 /**
  * @}
  */
+
+- (void)cacheGroupRows;
 
 @end

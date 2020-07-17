@@ -8,6 +8,10 @@
 
 #import "MBImageCell.h"
 
+@interface MBImageCell()
+@property (nonatomic, strong) NSColor *borderColor;
+@end
+
 @implementation MBImageCell
 
 - (instancetype)init {
@@ -15,7 +19,11 @@
 	if (self) {
 		[self setBordered:NO];
 		[self setBezeled:NO];
-//		[self setEditable:NO];
+		if (@available(macOS 10.13, *)) {
+			self.borderColor = [NSColor colorNamed:@"grid-line"];
+		} else {
+			self.borderColor = [NSColor gridColor];
+		}
 	}
 	return self;
 }
@@ -24,17 +32,16 @@
 
 - (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView withBackgroundColor:(NSColor *)backgroundColor {
 	[backgroundColor set];
-	NSRectFill(cellFrame);
+	NSRect rect = cellFrame;
+	NSRectFill(rect);
 	
 	[self drawWithFrame:cellFrame inView:controlView];
 }
 
 - (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView {
 	
-	NSColor *borderColor = [NSColor colorWithDeviceWhite:0.83 alpha:1.0];
-	[borderColor set];
+	[self.borderColor set];
 	
-	// Draw the right border
 	NSRect rightLine = NSMakeRect(NSMaxX(cellFrame)-1.0, NSMinY(cellFrame), 1.0, NSHeight(cellFrame));
 	NSRectFill(rightLine);
 	
@@ -53,13 +60,13 @@
 		accessoryButtonFrame.origin.x = cellFrame.origin.x + cellFrame.size.width - accessoryButtonFrame.size.width - 4;
 		
 		// adjust rect for top border
-		accessoryButtonFrame.origin.y += 1;
+		accessoryButtonFrame.origin.y = cellFrame.origin.y + ceilf(cellFrame.size.height / 2) - ceilf(self.accessoryButtonImage.size.height / 2);
 		
 		// draw the accessory image
 		
 		[self.accessoryButtonImage drawInRect:accessoryButtonFrame
 									 fromRect:NSZeroRect
-									operation:NSCompositeSourceOver
+									operation:NSCompositingOperationSourceOver
 									 fraction:1.0
 							   respectFlipped:YES
 										hints:nil];

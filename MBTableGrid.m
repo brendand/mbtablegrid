@@ -1,26 +1,26 @@
 /*
-   Copyright (c) 2008 Matthew Ball - http://www.mattballdesign.com
-
-   Permission is hereby granted, free of charge, to any person
-   obtaining a copy of this software and associated documentation
-   files (the "Software"), to deal in the Software without
-   restriction, including without limitation the rights to use,
-   copy, modify, merge, publish, distribute, sublicense, and/or sell
-   copies of the Software, and to permit persons to whom the
-   Software is furnished to do so, subject to the following
-   conditions:
-
-   The above copyright notice and this permission notice shall be
-   included in all copies or substantial portions of the Software.
-
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-   OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-   HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-   WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-   OTHER DEALINGS IN THE SOFTWARE.
+ Copyright (c) 2008 Matthew Ball - http://www.mattballdesign.com
+ 
+ Permission is hereby granted, free of charge, to any person
+ obtaining a copy of this software and associated documentation
+ files (the "Software"), to deal in the Software without
+ restriction, including without limitation the rights to use,
+ copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the
+ Software is furnished to do so, subject to the following
+ conditions:
+ 
+ The above copyright notice and this permission notice shall be
+ included in all copies or substantial portions of the Software.
+ 
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ OTHER DEALINGS IN THE SOFTWARE.
  */
 
 #import "MBTableGrid.h"
@@ -43,7 +43,7 @@ NSString *MBTableGridDidMoveColumnsNotification         = @"MBTableGridDidMoveCo
 NSString *MBTableGridDidMoveRowsNotification            = @"MBTableGridDidMoveRowsNotification";
 NSString *MBTableGridDidResizeColumnNotification		= @"MBTableGridDidResizeColumnNotification";
 CGFloat MBTableHeaderMinimumColumnWidth = 30.0f;
-CGFloat MBTableGridContentViewPadding = 21.0f;
+CGFloat MBTableGridContentViewPadding = 40.0f;
 
 #pragma mark -
 #pragma mark Drag Types
@@ -54,6 +54,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 @property (nonatomic, strong) NSUndoManager *cachedUndoManager;
 @property (nonatomic) BOOL syncronizingScroll;
+@property (nonatomic, strong) NSEvent *keyEvent;
 
 @end
 
@@ -121,146 +122,169 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 @implementation MBTableGrid
 
 @synthesize defaultCellFont = _defaultCellFont;
+@synthesize isEditable = _isEditable;
 
 #pragma mark -
 #pragma mark Initialization & Superclass Overrides
 
+- (instancetype)initWithCoder:(NSCoder *)coder
+{
+	self = [super initWithCoder:coder];
+	if (self) {
+		[self commonInit:NSMakeRect(0, 0, 500, 200)];
+	}
+	return self;
+}
+
+- (void)commonInit:(NSRect)frameRect {
+	self.wantsLayer = YES;
+	
+	columnWidths = [NSMutableDictionary dictionary];
+	columnIndexNames = [NSMutableArray array];
+	
+	self.includeGroupSummaryRows = YES;
+	
+	// Post frame changed notifications
+	[self setPostsFrameChangedNotifications:YES];
+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(viewFrameDidChange:) name:NSViewFrameDidChangeNotification object:self];
+	
+	// Set the default cell
+	MBTableGridCell *defaultCell = [[MBTableGridCell alloc] initTextCell:@""];
+	[defaultCell setBordered:YES];
+	[defaultCell setScrollable:YES];
+	[defaultCell setLineBreakMode:NSLineBreakByTruncatingTail];
+	[self setCell:defaultCell];
+	
+	// Setup the column headers
+	NSRect columnHeaderFrame = NSMakeRect(MBTableGridRowHeaderWidth, 0, frameRect.size.width - MBTableGridRowHeaderWidth, MBTableGridColumnHeaderHeight);
+	
+	columnHeaderScrollView = [[NSScrollView alloc] initWithFrame:columnHeaderFrame];
+	columnHeaderView = [[MBTableGridHeaderView alloc] initWithFrame:columnHeaderScrollView.contentView.bounds];
+	columnHeaderView.identifier = @"Column Header View";
+	columnHeaderScrollView.autoresizesSubviews = YES;
+	[columnHeaderView setAutoresizingMask:NSViewWidthSizable];
+	[columnHeaderView setOrientation:MBTableHeaderHorizontalOrientation];
+	frozenColumnHeaderView = [[MBTableGridHeaderView alloc] initWithFrame:NSMakeRect(0, 0, 0, columnHeaderFrame.size.height)];
+	
+	[frozenColumnHeaderView setOrientation:MBTableHeaderHorizontalOrientation];
+	[columnHeaderScrollView setAutoresizingMask:NSViewWidthSizable];
+	[columnHeaderScrollView setDocumentView:columnHeaderView];
+	[columnHeaderScrollView setDrawsBackground:NO];
+	[self addSubview:columnHeaderScrollView];
+	[columnHeaderScrollView addFloatingSubview:frozenColumnHeaderView forAxis:NSEventGestureAxisHorizontal];
+	frozenColumnHeaderView.hidden = YES;
+	
+	// Setup the row headers
+	NSRect rowHeaderFrame = NSMakeRect(0, MBTableGridColumnHeaderHeight, MBTableGridRowHeaderWidth, [self frame].size.height);
+	rowHeaderScrollView = [[NSScrollView alloc] initWithFrame:rowHeaderFrame];
+	rowHeaderView = [[MBTableGridHeaderView alloc] initWithFrame:NSMakeRect(0, 0, rowHeaderFrame.size.width, rowHeaderFrame.size.height)];
+	
+//	[rowHeaderView setAutoresizingMask:NSViewHeightSizable];
+	[rowHeaderView setOrientation:MBTableHeaderVerticalOrientation];
+	[rowHeaderScrollView setDocumentView:rowHeaderView];
+	[rowHeaderScrollView setAutoresizingMask:NSViewHeightSizable];
+	[rowHeaderScrollView setDrawsBackground:NO];
+	[self addSubview:rowHeaderScrollView];
+	
+	
+	// Setup the footer view
+	NSRect columnFooterFrame = NSMakeRect(MBTableGridRowHeaderWidth, frameRect.size.height - MBTableGridColumnHeaderHeight, frameRect.size.width - MBTableGridRowHeaderWidth, MBTableGridColumnHeaderHeight);
+	
+	columnFooterScrollView = [[NSScrollView alloc] initWithFrame:columnFooterFrame];
+	columnFooterView = [[MBTableGridFooterView alloc] initWithFrame:NSMakeRect(0, 0, columnFooterFrame.size.width, columnFooterFrame.size.height)];
+	frozenColumnFooterView = [[MBTableGridFooterView alloc] initWithFrame:NSMakeRect(0, 0, 0, columnFooterFrame.size.height)];
+	//		[columnFooterView setAutoresizingMask:NSViewWidthSizable];
+	[columnFooterScrollView setDocumentView:columnFooterView];
+	[columnFooterScrollView setAutoresizingMask:(NSViewWidthSizable | NSViewMinYMargin)];
+	[columnFooterScrollView setDrawsBackground:NO];
+	[self addSubview:columnFooterScrollView];
+	[columnFooterScrollView addFloatingSubview:frozenColumnFooterView forAxis:NSEventGestureAxisHorizontal];
+	frozenColumnFooterView.hidden = YES;
+	
+	// Setup the content view
+	NSRect contentFrame = NSMakeRect(MBTableGridRowHeaderWidth, MBTableGridColumnHeaderHeight, NSWidth(frameRect) - MBTableGridRowHeaderWidth, NSHeight(frameRect) - MBTableGridColumnHeaderHeight);
+	contentScrollView = [[NSScrollView alloc] initWithFrame:contentFrame];
+	contentView = [[MBTableGridContentView alloc] initWithFrame:NSMakeRect(0, 0, contentFrame.size.width, contentFrame.size.height)];
+	[contentScrollView setDocumentView:contentView];
+	NSClipView *contentClipView = contentScrollView.subviews.firstObject;
+	contentClipView.copiesOnScroll = YES;
+	[contentScrollView setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
+	[contentScrollView setHasHorizontalScroller:YES];
+	[contentScrollView setHasVerticalScroller:YES];
+	[contentScrollView setAutohidesScrollers:YES];
+	[contentScrollView setDrawsBackground:YES];
+	contentScrollView.backgroundColor = [NSColor controlBackgroundColor];
+	[self addSubview:contentScrollView];
+	
+	// Setup the frozen content view
+	NSRect frozenContentFrame = NSMakeRect(MBTableGridRowHeaderWidth, MBTableGridColumnHeaderHeight, 0, NSHeight(frameRect) - MBTableGridColumnHeaderHeight);
+	frozenContentScrollView = [[NSScrollView alloc] initWithFrame:frozenContentFrame];
+	frozenContentView = [[MBTableGridContentView alloc] initWithFrame:NSMakeRect(0, 0, 0, frozenContentFrame.size.height)];
+	[frozenContentScrollView setDocumentView:frozenContentView];
+	[frozenContentScrollView setAutoresizingMask:NSViewHeightSizable];
+	[frozenContentScrollView setHasHorizontalScroller:NO];
+	[frozenContentScrollView setHasVerticalScroller:YES];
+	NSEdgeInsets insets = frozenContentScrollView.scrollerInsets;
+	insets.right = -99999;
+	frozenContentScrollView.scrollerInsets = insets;
+	[frozenContentScrollView setAutohidesScrollers:YES];
+	[frozenContentScrollView setHorizontalScrollElasticity:NSScrollElasticityNone];
+	[frozenContentScrollView setDrawsBackground:YES];
+	frozenContentScrollView.backgroundColor = [NSColor windowBackgroundColor];
+	frozenContentScrollView.hidden = YES;
+	[self addSubview:frozenContentScrollView];
+	
+	// Setup the column shadow
+	NSRect columnShadowFrame = NSMakeRect(MBTableGridRowHeaderWidth, MBTableGridColumnHeaderHeight, frameRect.size.width, MBTableGridShadowHeight);
+	columnShadowView = [[MBTableGridShadowView alloc] initWithFrame:columnShadowFrame];
+	columnShadowView.orientation = MBTableHeaderHorizontalOrientation;
+	columnShadowView.autoresizingMask = NSViewWidthSizable;
+	[self addSubview:columnShadowView];
+	
+	// Setup the row shadow
+	NSRect rowShadowFrame = NSMakeRect(MBTableGridRowHeaderWidth, 0, MBTableGridShadowWidth, frameRect.size.height);
+	rowShadowView = [[MBTableGridShadowView alloc] initWithFrame:rowShadowFrame];
+	rowShadowView.orientation = MBTableHeaderVerticalOrientation;
+	rowShadowView.autoresizingMask = NSViewHeightSizable;
+	[self addSubview:rowShadowView];
+	
+	// We want to synchronize the scroll views
+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(columnHeaderViewDidScroll:) name:NSViewBoundsDidChangeNotification object:[columnHeaderScrollView contentView]];
+	
+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(rowHeaderViewDidScroll:) name:NSViewBoundsDidChangeNotification object:[rowHeaderScrollView contentView]];
+	
+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(columnFooterViewDidScroll:) name:NSViewBoundsDidChangeNotification object:[columnFooterScrollView contentView]];
+	
+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(contentViewDidScroll:) name:NSViewBoundsDidChangeNotification object:[contentScrollView contentView]];
+	
+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(frozenContentViewDidScroll:) name:NSViewBoundsDidChangeNotification object:[frozenContentScrollView contentView]];
+	
+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(didUndoOrRedo:) name:NSUndoManagerDidUndoChangeNotification object:nil];
+	
+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(didUndoOrRedo:) name:NSUndoManagerDidRedoChangeNotification object:nil];
+	
+	// Set the default selection
+	_selectedColumnIndexes = [NSIndexSet indexSet];
+	_selectedRowIndexes = [NSMutableIndexSet indexSet];
+	self.allowsMultipleSelection = YES;
+	
+	// Set the default sticky edges
+	stickyColumnEdge = MBTableGridLeftEdge;
+	stickyRowEdge = MBTableGridTopEdge;
+	
+	shouldOverrideModifiers = NO;
+	
+	self.columnRects = [NSMutableDictionary dictionary];
+	
+	self.footerHidden = NO;
+	self.isEditable = YES;
+	
+}
+
 - (id)initWithFrame:(NSRect)frameRect {
 	if (self = [super initWithFrame:frameRect]) {
-		columnWidths = [NSMutableDictionary dictionary];
-		columnIndexNames = [NSMutableArray array];
-        
-        self.includeGroupSummaryRows = YES;
-        
-		// Post frame changed notifications
-		[self setPostsFrameChangedNotifications:YES];
-		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(viewFrameDidChange:) name:NSViewFrameDidChangeNotification object:self];
-
-		// Set the default cell
-		MBTableGridCell *defaultCell = [[MBTableGridCell alloc] initTextCell:@""];
-		[defaultCell setBordered:YES];
-		[defaultCell setScrollable:YES];
-		[defaultCell setLineBreakMode:NSLineBreakByTruncatingTail];
-		[self setCell:defaultCell];
-        
-		// Setup the column headers
-		NSRect columnHeaderFrame = NSMakeRect(MBTableGridRowHeaderWidth, 0, frameRect.size.width - MBTableGridRowHeaderWidth, MBTableGridColumnHeaderHeight);
-
-		columnHeaderScrollView = [[NSScrollView alloc] initWithFrame:columnHeaderFrame];
-		columnHeaderView = [[MBTableGridHeaderView alloc] initWithFrame:NSMakeRect(0, 0, columnHeaderFrame.size.width, columnHeaderFrame.size.height)];
 		
-		//	[columnHeaderView setAutoresizingMask:NSViewWidthSizable];
-		[columnHeaderView setOrientation:MBTableHeaderHorizontalOrientation];
-        frozenColumnHeaderView = [[MBTableGridHeaderView alloc] initWithFrame:NSMakeRect(0, 0, 0, columnHeaderFrame.size.height)];
-		
-        [frozenColumnHeaderView setOrientation:MBTableHeaderHorizontalOrientation];
-		[columnHeaderScrollView setDocumentView:columnHeaderView];
-		[columnHeaderScrollView setAutoresizingMask:NSViewWidthSizable];
-		[columnHeaderScrollView setDrawsBackground:NO];
-		[self addSubview:columnHeaderScrollView];
-        [columnHeaderScrollView addFloatingSubview:frozenColumnHeaderView forAxis:NSEventGestureAxisHorizontal];
-        frozenColumnHeaderView.hidden = YES;
-
-		// Setup the row headers
-		NSRect rowHeaderFrame = NSMakeRect(0, MBTableGridColumnHeaderHeight, MBTableGridRowHeaderWidth, [self frame].size.height - MBTableGridColumnHeaderHeight * 2);
-		rowHeaderScrollView = [[NSScrollView alloc] initWithFrame:rowHeaderFrame];
-		rowHeaderView = [[MBTableGridHeaderView alloc] initWithFrame:NSMakeRect(0, 0, rowHeaderFrame.size.width, rowHeaderFrame.size.height)];
-		
-		//[rowHeaderView setAutoresizingMask:NSViewHeightSizable];
-		[rowHeaderView setOrientation:MBTableHeaderVerticalOrientation];
-		[rowHeaderScrollView setDocumentView:rowHeaderView];
-		[rowHeaderScrollView setAutoresizingMask:NSViewHeightSizable];
-		[rowHeaderScrollView setDrawsBackground:NO];
-		[self addSubview:rowHeaderScrollView];
-		
-		// Setup the footer view
-		NSRect columnFooterFrame = NSMakeRect(MBTableGridRowHeaderWidth, frameRect.size.height - MBTableGridColumnHeaderHeight, frameRect.size.width - MBTableGridRowHeaderWidth, MBTableGridColumnHeaderHeight);
-		
-		columnFooterScrollView = [[NSScrollView alloc] initWithFrame:columnFooterFrame];
-		columnFooterView = [[MBTableGridFooterView alloc] initWithFrame:NSMakeRect(0, 0, columnFooterFrame.size.width, columnFooterFrame.size.height)];
-        frozenColumnFooterView = [[MBTableGridFooterView alloc] initWithFrame:NSMakeRect(0, 0, 0, columnFooterFrame.size.height)];
-//		[columnFooterView setAutoresizingMask:NSViewWidthSizable];
-		[columnFooterScrollView setDocumentView:columnFooterView];
-		[columnFooterScrollView setAutoresizingMask:(NSViewWidthSizable | NSViewMinYMargin)];
-		[columnFooterScrollView setDrawsBackground:NO];
-		[self addSubview:columnFooterScrollView];
-        [columnFooterScrollView addFloatingSubview:frozenColumnFooterView forAxis:NSEventGestureAxisHorizontal];
-        frozenColumnFooterView.hidden = YES;
-        
-		// Setup the content view
-		NSRect contentFrame = NSMakeRect(MBTableGridRowHeaderWidth, MBTableGridColumnHeaderHeight, NSWidth(frameRect) - MBTableGridRowHeaderWidth, NSHeight(frameRect) - MBTableGridColumnHeaderHeight);
-		contentScrollView = [[NSScrollView alloc] initWithFrame:contentFrame];
-		contentView = [[MBTableGridContentView alloc] initWithFrame:NSMakeRect(0, 0, contentFrame.size.width, contentFrame.size.height)];
-		[contentScrollView setDocumentView:contentView];
-		[contentScrollView setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
-		[contentScrollView setHasHorizontalScroller:YES];
-		[contentScrollView setHasVerticalScroller:YES];
-		[contentScrollView setAutohidesScrollers:YES];
-		[contentScrollView setDrawsBackground:YES];
-		contentScrollView.backgroundColor = [NSColor colorWithCalibratedWhite:0.98 alpha:1.0];
-		[self addSubview:contentScrollView];
-
-        // Setup the frozen content view
-        NSRect frozenContentFrame = NSMakeRect(MBTableGridRowHeaderWidth, MBTableGridColumnHeaderHeight, 0, NSHeight(frameRect) - MBTableGridColumnHeaderHeight);
-        frozenContentScrollView = [[NSScrollView alloc] initWithFrame:frozenContentFrame];
-        frozenContentView = [[MBTableGridContentView alloc] initWithFrame:NSMakeRect(0, 0, 0, frozenContentFrame.size.height)];
-        [frozenContentScrollView setDocumentView:frozenContentView];
-        [frozenContentScrollView setAutoresizingMask:NSViewHeightSizable];
-        [frozenContentScrollView setHasHorizontalScroller:NO];
-        [frozenContentScrollView setHasVerticalScroller:YES];
-        NSEdgeInsets insets = frozenContentScrollView.scrollerInsets;
-        insets.right = -99999;
-        frozenContentScrollView.scrollerInsets = insets;
-        [frozenContentScrollView setAutohidesScrollers:YES];
-        [frozenContentScrollView setHorizontalScrollElasticity:NSScrollElasticityNone];
-        [frozenContentScrollView setDrawsBackground:YES];
-        frozenContentScrollView.backgroundColor = [NSColor colorWithCalibratedWhite:0.98 alpha:1.0];
-        frozenContentScrollView.hidden = YES;
-		[self addSubview:frozenContentScrollView];
-
-        // Setup the column shadow
-        NSRect columnShadowFrame = NSMakeRect(MBTableGridRowHeaderWidth, MBTableGridColumnHeaderHeight, contentFrame.size.width, MBTableGridShadowHeight);
-        columnShadowView = [[MBTableGridShadowView alloc] initWithFrame:columnShadowFrame];
-        columnShadowView.orientation = MBTableHeaderHorizontalOrientation;
-        columnShadowView.autoresizingMask = NSViewWidthSizable;
-        [self addSubview:columnShadowView];
-        
-        // Setup the row shadow
-        NSRect rowShadowFrame = NSMakeRect(MBTableGridRowHeaderWidth, 0, MBTableGridShadowWidth, contentFrame.size.height);
-        rowShadowView = [[MBTableGridShadowView alloc] initWithFrame:rowShadowFrame];
-        rowShadowView.orientation = MBTableHeaderVerticalOrientation;
-        rowShadowView.autoresizingMask = NSViewHeightSizable;
-        [self addSubview:rowShadowView];
-        
-		// We want to synchronize the scroll views
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(columnHeaderViewDidScroll:) name:NSViewBoundsDidChangeNotification object:[columnHeaderScrollView contentView]];
-        
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(rowHeaderViewDidScroll:) name:NSViewBoundsDidChangeNotification object:[rowHeaderScrollView contentView]];
-        
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(columnFooterViewDidScroll:) name:NSViewBoundsDidChangeNotification object:[columnFooterScrollView contentView]];
-        
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(contentViewDidScroll:) name:NSViewBoundsDidChangeNotification object:[contentScrollView contentView]];
-        
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(frozenContentViewDidScroll:) name:NSViewBoundsDidChangeNotification object:[frozenContentScrollView contentView]];
-        
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(didUndoOrRedo:) name:NSUndoManagerDidUndoChangeNotification object:nil];
-        
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(didUndoOrRedo:) name:NSUndoManagerDidRedoChangeNotification object:nil];
-        
-		// Set the default selection
-		_selectedColumnIndexes = [NSIndexSet indexSet];
-		_selectedRowIndexes = [NSMutableIndexSet indexSet];
-		self.allowsMultipleSelection = YES;
-
-		// Set the default sticky edges
-		stickyColumnEdge = MBTableGridLeftEdge;
-		stickyRowEdge = MBTableGridTopEdge;
-
-		shouldOverrideModifiers = NO;
-		
-		self.columnRects = [NSMutableDictionary dictionary];
-		
-		self.footerHidden = NO;
+		[self commonInit:frameRect];
 		
 	}
 	return self;
@@ -270,7 +294,11 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	_defaultCellFont = defaultCellFont;
 	[[self contentView] setDefaultCellFont:defaultCellFont];
 	[[self frozenContentView] setDefaultCellFont:defaultCellFont];
-	[self reloadData];
+	[[self frozenColumnHeaderView] setDefaultCellFont:defaultCellFont];
+	[[self columnHeaderView] setDefaultCellFont:defaultCellFont];
+	if (_numberOfColumns > 0) {
+		[self reloadData];
+	}
 }
 
 - (void)sortButtonClickedOnColumn:(NSUInteger)columnIndex {
@@ -280,12 +308,13 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (void)awakeFromNib {
-//	[self reloadData];
+	//	[self reloadData];
 	[self registerForDraggedTypes:@[]];
 }
 
 - (void)dealloc {
 	[[NSNotificationCenter defaultCenter] removeObserver:self];
+	//	NSLog(@"%@ dealloc", self);
 }
 
 - (BOOL)isFlipped {
@@ -302,10 +331,14 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 - (void)setFooterHidden:(BOOL)footerHidden {
 	_footerHidden = footerHidden;
+	
 	NSSize footerSize = columnFooterScrollView.frame.size;
-    NSSize contentScrollSize = contentScrollView.frame.size;
+	NSSize contentScrollSize = contentScrollView.frame.size;
 	NSSize frozenContentScrollSize = frozenContentScrollView.frame.size;
 	NSSize rowHeaderScrollSize = rowHeaderScrollView.frame.size;
+	columnFooterView.hidden = footerHidden;
+	frozenColumnFooterView.hidden = footerHidden;
+	
 	if (footerHidden) {
 		contentScrollSize.height = self.frame.size.height - columnHeaderScrollView.frame.size.height - 1;
 		frozenContentScrollSize.height = self.frame.size.height - columnHeaderScrollView.frame.size.height - 1;
@@ -322,15 +355,15 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (void)setNumberOfFrozenColumns:(NSUInteger)numberOfFrozenColumns {
-    _numberOfFrozenColumns = numberOfFrozenColumns;
-    
-    [self setNeedsDisplay:YES];
+	_numberOfFrozenColumns = numberOfFrozenColumns;
+	
+	[self setNeedsDisplay:YES];
 }
 
 - (void)setFreezeColumns:(BOOL)freezeColumns {
-    _freezeColumns = freezeColumns;
-    
-    [self setNeedsDisplay:YES];
+	_freezeColumns = freezeColumns;
+	
+	[self setNeedsDisplay:YES];
 }
 
 /**
@@ -360,7 +393,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
  */
 - (NSImage *)indicatorImageInColumn:(NSUInteger)columnIndex {
 	NSImage *indicatorImage = nil;
-
+	
 	return indicatorImage;
 }
 
@@ -370,14 +403,18 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (void)drawRect:(NSRect)aRect {
+	
+	//	[[NSColor windowBackgroundColor] set];
+	//	NSRectFill(aRect);
+	
 	// If the view is the first responder, draw the focus ring
 	NSResponder *firstResponder = [[self window] firstResponder];
 	if (([[firstResponder class] isSubclassOfClass:[NSView class]] && [(NSView *)firstResponder isDescendantOf : self]) && [[self window] isKeyWindow]) {
 		[[NSGraphicsContext currentContext] saveGraphicsState];
 		NSSetFocusRingStyle(NSFocusRingOnly);
-
+		
 		[[NSBezierPath bezierPathWithRect:NSMakeRect(0, 0, [self frame].size.width, [self frame].size.height)] fill];
-
+		
 		[[NSGraphicsContext currentContext] restoreGraphicsState];
 		[self setKeyboardFocusRingNeedsDisplayInRect:[self bounds]];
 	}
@@ -385,49 +422,66 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	// Draw the corner header
 	NSRect cornerRect = [self headerRectOfCorner];
 	[self _drawCornerHeaderBackgroundInRect:cornerRect];
-
+	
 	// Draw the column header background
 	NSRect columnHeaderRect = NSMakeRect(NSWidth(cornerRect), 0, [self frame].size.width - NSWidth(cornerRect), MBTableGridColumnHeaderHeight);
 	[self _drawColumnHeaderBackgroundInRect:columnHeaderRect];
 	
-	// Draw the corner footer
-	NSRect footerRect = [self footerRectOfCorner];
-	[self _drawCornerFooterBackgroundInRect:footerRect];
-
 	CGFloat footerHeight = MBTableGridColumnHeaderHeight;
 	if (_footerHidden) {
 		footerHeight = 0.0;
 	}
 	// Draw the row header background
-	NSRect rowHeaderRect = NSMakeRect(0, NSMaxY(cornerRect), MBTableGridRowHeaderWidth, [self frame].size.height - MBTableGridColumnHeaderHeight + footerHeight);
+	NSRect rowHeaderRect = NSMakeRect(0, NSMaxY(cornerRect), MBTableGridRowHeaderWidth, MAX(self.frame.size.height, self.contentView.frame.size.height));
 	[self _drawRowHeaderBackgroundInRect:rowHeaderRect];
-
+	
 	// Draw the column footer background
 	
-	NSRect columnFooterRect = NSMakeRect(NSWidth(cornerRect), NSMaxY(self.frame) - MBTableGridColumnHeaderHeight * 2 - 2, NSWidth(self.frame) - NSWidth(cornerRect), MBTableGridColumnHeaderHeight);
+	NSRect columnFooterRect = NSMakeRect(NSWidth(cornerRect), NSMaxY(self.frame) - MBTableGridColumnHeaderHeight - 2, NSWidth(self.frame) - NSWidth(cornerRect), MBTableGridColumnHeaderHeight);
 	[self _drawColumnFooterBackgroundInRect:columnFooterRect];
-
+	
+	// Draw the corner footer
+	NSRect footerRect = [self footerRectOfCorner];
+	[self _drawCornerFooterBackgroundInRect:footerRect];
+	
 }
 
 - (void)setNeedsDisplay:(BOOL)needsDisplay {
-    
-    [super setNeedsDisplay:needsDisplay];
-    
-    [self.contentView setNeedsDisplay:needsDisplay];
-    [columnHeaderView setNeedsDisplay:needsDisplay];
-    [rowHeaderView setNeedsDisplay:needsDisplay];
-    [self.frozenContentView setNeedsDisplay:needsDisplay];
-    [frozenColumnHeaderView setNeedsDisplay:needsDisplay];
-    [frozenColumnFooterView setNeedsDisplay:needsDisplay];
-    [columnShadowView setNeedsDisplay:needsDisplay];
-    [rowShadowView setNeedsDisplay:needsDisplay];
-    
+	
+	[super setNeedsDisplay:needsDisplay];
+	
+	[self.contentView setNeedsDisplay:needsDisplay];
+	[columnHeaderView setNeedsDisplay:needsDisplay];
+	[rowHeaderView setNeedsDisplay:needsDisplay];
+	[self.frozenContentView setNeedsDisplay:needsDisplay];
+	[frozenColumnHeaderView setNeedsDisplay:needsDisplay];
+	[frozenColumnFooterView setNeedsDisplay:needsDisplay];
+	[columnShadowView setNeedsDisplay:needsDisplay];
+	[rowShadowView setNeedsDisplay:needsDisplay];
+	
 	if (!_footerHidden) {
 		[columnFooterView setNeedsDisplay:needsDisplay];
 	}
 }
 
 #pragma mark Resize scrollview content size
+
+/** Make sure we catch mouse down events inside the scrollview, but outside the table content view. */
+//- (NSView*) hitTest:(NSPoint)point {
+//	NSView* v = [super hitTest:point];
+//
+//	if (v == contentScrollView.contentView) {
+//		NSEvent* event = self.window.currentEvent;
+//		if(event != nil && event.type == NSEventTypeLeftMouseDown) {
+//			// Clear selection
+//			NSMutableIndexSet* empty = [NSMutableIndexSet indexSet];
+//			[self setSelectedRowIndexes:empty];
+//			[self setSelectedColumnIndexes:empty];
+//		}
+//	}
+//
+//	return v;
+//}
 
 - (CGFloat)resizeColumnWithIndex:(NSUInteger)columnIndex withDistance:(float)distance location:(NSPoint)location {
 	// Get column key
@@ -439,133 +493,153 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	if (!columnKey) {
 		columnKey = [NSString stringWithFormat:@"column%lu", columnIndex];
 	}
-
+	
 	// Note that we only need this rect for its origin, which won't be changing, otherwise we'd need to flush the column rect cache first
 	NSRect columnRect = [self rectOfColumn:columnIndex];
-
+	
 	// Flush rect cache for this column because we're changing its size
 	// Note that we're doing this after calling rectOfColumn: because that would cache the rect before we change its width...
 	[self.columnRects removeAllObjects];
-
+	
 	// Set new width of column
 	CGFloat currentWidth = [columnWidths[columnKey] floatValue];
-    CGFloat oldWidth = currentWidth;
-    CGFloat offset = 0.0;
-    BOOL isFrozen = [self isFrozenColumn:columnIndex];
+	CGFloat oldWidth = currentWidth;
+	CGFloat offset = 0.0;
+	BOOL isFrozen = [self isFrozenColumn:columnIndex];
 	
-    currentWidth += distance;
-    
-    CGFloat minColumnWidth = MBTableHeaderMinimumColumnWidth;
-    
+	BOOL rightToLeft = [[NSApplication sharedApplication] userInterfaceLayoutDirection] == NSUserInterfaceLayoutDirectionRightToLeft;
+	currentWidth += distance;
+	
+	CGFloat minColumnWidth = MBTableHeaderMinimumColumnWidth;
+	
 	minColumnWidth += columnHeaderView.sortAscendingImage.size.width + 2.0f;
-
-    if (currentWidth <= minColumnWidth) {
-        currentWidth = minColumnWidth;
-        offset = columnRect.origin.x - rowHeaderView.bounds.size.width - location.x + minColumnWidth + contentScrollView.contentView.bounds.origin.x;
-        distance = currentWidth - oldWidth;
-    }
 	
-    columnWidths[columnKey] = @(currentWidth);
-    
-    // Update views with new sizes
-    [contentView setFrameSize:NSMakeSize(NSWidth(contentView.frame) + distance, NSHeight(contentView.frame))];
-    [columnHeaderView setFrameSize:NSMakeSize(NSWidth(columnHeaderView.frame) + distance, NSHeight(columnHeaderView.frame))];
-    [columnFooterView setFrameSize:NSMakeSize(NSWidth(columnFooterView.frame) + distance, NSHeight(columnFooterView.frame))];
-    
-    if (isFrozen) {
-        [frozenContentScrollView setFrameSize:NSMakeSize(NSWidth(frozenContentView.frame) + distance, NSHeight(frozenContentScrollView.frame))];
-        [frozenContentView setFrameSize:NSMakeSize(NSWidth(frozenContentView.frame) + distance, NSHeight(frozenContentView.frame))];
-        [frozenColumnHeaderView setFrameSize:NSMakeSize(NSWidth(frozenColumnHeaderView.frame) + distance, NSHeight(frozenColumnHeaderView.frame))];
-        [frozenColumnFooterView setFrameSize:NSMakeSize(NSWidth(frozenColumnFooterView.frame) + distance, NSHeight(frozenColumnFooterView.frame))];
-    }
-    
-    NSRect rectOfResizedAndVisibleRightwardColumns = NSMakeRect(columnRect.origin.x - rowHeaderView.bounds.size.width, 0, contentView.bounds.size.width - columnRect.origin.x, NSHeight(contentView.frame));
-    [contentView setNeedsDisplayInRect:rectOfResizedAndVisibleRightwardColumns];
-    
-    NSRect rectOfResizedAndVisibleRightwardHeaders = NSMakeRect(columnRect.origin.x - rowHeaderView.bounds.size.width, 0, contentView.bounds.size.width - columnRect.origin.x, NSHeight(columnHeaderView.frame));
-    [columnHeaderView setNeedsDisplayInRect:rectOfResizedAndVisibleRightwardHeaders];
-    
-    NSRect rectOfResizedAndVisibleRightwardFooters = NSMakeRect(columnRect.origin.x - rowHeaderView.bounds.size.width, 0, contentView.bounds.size.width - columnRect.origin.x, NSHeight(columnFooterView.frame));
-    [columnFooterView setNeedsDisplayInRect:rectOfResizedAndVisibleRightwardFooters];
-    
-    if (isFrozen) {
-        NSRect rectOfResizedAndVisibleRightwardFrozenColumns = NSMakeRect(columnRect.origin.x - rowHeaderView.bounds.size.width, 0, [self frozenColumnsWidth] - columnRect.origin.x, NSHeight(frozenContentView.frame));
-        [frozenContentView setNeedsDisplayInRect:rectOfResizedAndVisibleRightwardFrozenColumns];
-        
-        NSRect rectOfResizedAndVisibleRightwardFrozenHeaders = NSMakeRect(columnRect.origin.x - rowHeaderView.bounds.size.width, 0, [self frozenColumnsWidth] - columnRect.origin.x, NSHeight(frozenColumnHeaderView.frame));
-        [frozenColumnHeaderView setNeedsDisplayInRect:rectOfResizedAndVisibleRightwardFrozenHeaders];
-        
-        NSRect rectOfResizedAndVisibleRightwardFrozenFooters = NSMakeRect(columnRect.origin.x - rowHeaderView.bounds.size.width, 0, [self frozenColumnsWidth] - columnRect.origin.x, NSHeight(frozenColumnFooterView.frame));
-        [frozenColumnFooterView setNeedsDisplayInRect:rectOfResizedAndVisibleRightwardFrozenFooters];
-    }
-    
-    // Update the shadow views' sizes
-    NSRect columnShadowFrame = [columnShadowView frame];
-    columnShadowFrame.size.width = columnHeaderView.frame.size.width;
-    columnShadowView.frame = columnShadowFrame;
-    
-    NSRect rowShadowFrame = [rowShadowView frame];
-    rowShadowFrame.origin.x = MBTableGridRowHeaderWidth + frozenContentView.bounds.size.width;
-    rowShadowFrame.size.height = rowHeaderView.bounds.size.height;
-    rowShadowView.frame = rowShadowFrame;
-    
-    [self updateShadows];
-    
-    return offset;
+	if (currentWidth <= minColumnWidth) {
+		currentWidth = minColumnWidth;
+		offset = columnRect.origin.x - rowHeaderView.bounds.size.width - location.x + minColumnWidth + contentScrollView.contentView.bounds.origin.x;
+		distance = currentWidth - oldWidth;
+	}
+	
+	columnWidths[columnKey] = @(currentWidth);
+	
+	// Update views with new sizes
+	if (rightToLeft) {
+		
+	} else {
+		[contentView setFrameSize:NSMakeSize(NSWidth(contentView.frame) + distance, NSHeight(contentView.frame))];
+		[columnHeaderView setFrameSize:NSMakeSize(NSWidth(columnHeaderView.frame) + distance, NSHeight(columnHeaderView.frame))];
+		[columnFooterView setFrameSize:NSMakeSize(NSWidth(columnFooterView.frame) + distance, NSHeight(columnFooterView.frame))];
+	}
+	
+	if (isFrozen) {
+		[frozenContentScrollView setFrameSize:NSMakeSize(NSWidth(frozenContentView.frame) + distance, NSHeight(frozenContentScrollView.frame))];
+		[frozenContentView setFrameSize:NSMakeSize(NSWidth(frozenContentView.frame) + distance, NSHeight(frozenContentView.frame))];
+		[frozenColumnHeaderView setFrameSize:NSMakeSize(NSWidth(frozenColumnHeaderView.frame) + distance, NSHeight(frozenColumnHeaderView.frame))];
+		[frozenColumnFooterView setFrameSize:NSMakeSize(NSWidth(frozenColumnFooterView.frame) + distance, NSHeight(frozenColumnFooterView.frame))];
+	}
+	
+	NSRect rectOfResizedAndVisibleRightwardColumns = NSMakeRect(columnRect.origin.x - rowHeaderView.bounds.size.width, 0, contentView.bounds.size.width - columnRect.origin.x, NSHeight(contentView.frame));
+	[contentView setNeedsDisplayInRect:rectOfResizedAndVisibleRightwardColumns];
+	
+	NSRect rectOfResizedAndVisibleRightwardHeaders = NSMakeRect(columnRect.origin.x - rowHeaderView.bounds.size.width, 0, contentView.bounds.size.width - columnRect.origin.x, NSHeight(columnHeaderView.frame));
+	[columnHeaderView setNeedsDisplayInRect:rectOfResizedAndVisibleRightwardHeaders];
+	
+	NSRect rectOfResizedAndVisibleRightwardFooters = NSMakeRect(columnRect.origin.x - rowHeaderView.bounds.size.width, 0, contentView.bounds.size.width - columnRect.origin.x, NSHeight(columnFooterView.frame));
+	[columnFooterView setNeedsDisplayInRect:rectOfResizedAndVisibleRightwardFooters];
+	
+	if (isFrozen) {
+		NSRect rectOfResizedAndVisibleRightwardFrozenColumns = NSMakeRect(columnRect.origin.x - rowHeaderView.bounds.size.width, 0, [self frozenColumnsWidth] - columnRect.origin.x, NSHeight(frozenContentView.frame));
+		[frozenContentView setNeedsDisplayInRect:rectOfResizedAndVisibleRightwardFrozenColumns];
+		
+		NSRect rectOfResizedAndVisibleRightwardFrozenHeaders = NSMakeRect(columnRect.origin.x - rowHeaderView.bounds.size.width, 0, [self frozenColumnsWidth] - columnRect.origin.x, NSHeight(frozenColumnHeaderView.frame));
+		[frozenColumnHeaderView setNeedsDisplayInRect:rectOfResizedAndVisibleRightwardFrozenHeaders];
+		
+		NSRect rectOfResizedAndVisibleRightwardFrozenFooters = NSMakeRect(columnRect.origin.x - rowHeaderView.bounds.size.width, 0, [self frozenColumnsWidth] - columnRect.origin.x, NSHeight(frozenColumnFooterView.frame));
+		[frozenColumnFooterView setNeedsDisplayInRect:rectOfResizedAndVisibleRightwardFrozenFooters];
+	}
+	
+	// Update the shadow views' sizes
+	NSRect columnShadowFrame = [columnShadowView frame];
+	columnShadowFrame.size.width = self.frame.size.width;
+	columnShadowView.frame = columnShadowFrame;
+	
+	NSRect rowShadowFrame = [rowShadowView frame];
+	rowShadowFrame.origin.x = MBTableGridRowHeaderWidth + frozenContentView.bounds.size.width;
+	rowShadowFrame.size.height = self.frame.size.height;
+	rowShadowView.frame = rowShadowFrame;
+	
+	[self updateShadows];
+	
+	return offset;
 }
 
 - (void)registerForDraggedTypes:(NSArray *)pboardTypes {
 	// Add the column and row types to the array
 	NSMutableArray *types = [NSMutableArray arrayWithArray:pboardTypes];
-
+	
 	if (!pboardTypes) {
 		types = [NSMutableArray array];
 	}
 	[types addObjectsFromArray:@[MBTableGridColumnDataType, MBTableGridRowDataType]];
-
+	
 	[super registerForDraggedTypes:types];
-
+	
 	// Register the content view for everything
 	[contentView registerForDraggedTypes:types];
 }
 
 #pragma mark Mouse Events
 
-- (void)mouseDown:(NSEvent *)theEvent {
-	// End editing (if necessary)
-    [[self cell] endEditing:[[self window] fieldEditor:NO forObject:contentView]];
-	[[self cell] endEditing:[[self window] fieldEditor:NO forObject:frozenContentView]];
+- (void)setIsEditable:(BOOL)isEditable {
+	_isEditable = isEditable;
+	self.contentView.isEditable = isEditable;
+	self.frozenContentView.isEditable = isEditable;
+	self.columnHeaderView.isEditable = isEditable;
+	self.rowHeaderView.isEditable = isEditable;
+}
 
-	// If we're not the first responder, we need to be
-	if ([[self window] firstResponder] != self) {
-		[[self window] makeFirstResponder:self];
+- (void)mouseDown:(NSEvent *)theEvent {
+	
+	if (!self.isEditable) {
+		[self.nextResponder mouseDown:theEvent];
+	} else {
+		
+		// End editing (if necessary)
+		[[self cell] endEditing:[[self window] fieldEditor:NO forObject:contentView]];
+		[[self cell] endEditing:[[self window] fieldEditor:NO forObject:frozenContentView]];
+		
+		// If we're not the first responder, we need to be
+		if ([[self window] firstResponder] != self) {
+			[[self window] makeFirstResponder:self];
+		}
 	}
 }
 
 #pragma mark Keyboard Events
 
 - (void)keyDown:(NSEvent *)theEvent {
-    // Special handling to detect the numeric keypad Enter key
-    if (theEvent.modifierFlags & NSNumericPadKeyMask) {
-        NSString *characters = theEvent.charactersIgnoringModifiers;
-        
-        if (characters.length == 1) {
-            unichar keyChar = [characters characterAtIndex:0];
-            
-            if (keyChar == NSEnterCharacter) {
-                [self doCommandBySelector:@selector(insertNewlineIgnoringFieldEditor:)];
-                return;
-            }
-        }
-    }
-    
-    [self interpretKeyEvents:@[theEvent]];
+	// Special handling to detect the numeric keypad Enter key
+	if (theEvent.modifierFlags & NSEventModifierFlagNumericPad) {
+		NSString *characters = theEvent.charactersIgnoringModifiers;
+		
+		if (characters.length == 1) {
+			unichar keyChar = [characters characterAtIndex:0];
+			
+			if (keyChar == NSEnterCharacter) {
+				[self doCommandBySelector:@selector(insertNewlineIgnoringFieldEditor:)];
+				return;
+			}
+		}
+	}
+	
+	self.keyEvent = theEvent;
+	[self interpretKeyEvents:@[theEvent]];
 }
 
 /*- (void)interpretKeyEvents:(NSArray *)eventArray
-   {
-
-   }*/
+ {
+ 
+ }*/
 
 #pragma mark NSResponder Event Handlers
 
@@ -573,21 +647,20 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	
 	NSIndexSet *selectedColumns = [self selectedColumnIndexes];
 	NSIndexSet *selectedRows = [self selectedRowIndexes];
-
-    if ([[self delegate] respondsToSelector:@selector(tableGrid:copyCellsAtColumns:rows:)]) {
+	
+	if ([[self delegate] respondsToSelector:@selector(tableGrid:copyCellsAtColumns:rows:)]) {
 		[[self delegate] tableGrid:self copyCellsAtColumns:selectedColumns rows:selectedRows];
 	}
 }
 
 - (void)paste:(id)sender {
 	
-    NSIndexSet *selectedColumns = [self selectedColumnIndexes];
-    NSIndexSet *selectedRows = [self selectedRowIndexes];
-    
-    if ([[self delegate] respondsToSelector:@selector(tableGrid:pasteCellsAtColumns:rows:)]) {
-        [[self delegate] tableGrid:self pasteCellsAtColumns:selectedColumns rows:selectedRows];
-        [self reloadData];
-    }
+	NSIndexSet *selectedColumns = [self selectedColumnIndexes];
+	NSIndexSet *selectedRows = [self selectedRowIndexes];
+	
+	if ([[self delegate] respondsToSelector:@selector(tableGrid:pasteCellsAtColumns:rows:)]) {
+		[[self delegate] tableGrid:self pasteCellsAtColumns:selectedColumns rows:selectedRows];
+	}
 }
 
 - (void)insertTab:(id)sender {
@@ -598,13 +671,13 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 - (void)insertBacktab:(id)sender {
 	// We want to change the selection, not expand it
 	shouldOverrideModifiers = YES;
-
+	
 	// Pressing Shift+Tab moves to the previous column
 	[self moveLeft:sender];
 }
 
 - (void)insertNewline:(id)sender {
-	if ([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask) {
+	if ([[NSApp currentEvent] modifierFlags] & NSEventModifierFlagShift) {
 		// Pressing Shift+Return moves to the previous row
 		shouldOverrideModifiers = YES;
 		[self moveUp:sender];
@@ -616,7 +689,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (void)insertNewlineIgnoringFieldEditor:(id)sender {
-    [self insertText:@"\n"];
+	[self insertText:@"\n"];
 }
 
 - (NSUInteger)previousNonGroupRowFromRow:(NSUInteger)row {
@@ -664,7 +737,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	
 	NSUInteger column = [self.selectedColumnIndexes firstIndex];
 	NSUInteger row = [self.selectedRowIndexes firstIndex];
-
+	
 	// Accomodate for the sticky edges
 	if (stickyColumnEdge == MBTableGridRightEdge) {
 		column = [self.selectedColumnIndexes lastIndex];
@@ -672,7 +745,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	if (stickyRowEdge == MBTableGridBottomEdge) {
 		row = [self.selectedRowIndexes lastIndex];
 	}
-
+	
 	// If we're already at the first row, do nothing
 	if (row <= 0 || (row == 1 && [self _isGroupRow:row - 1] && self.selectedRowIndexes.count == 1)) {
 		// we may have selections, so clear them if we do
@@ -681,7 +754,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		}
 		return;
 	}
-
+	
 	if (row > 0) {
 		
 		// If the Shift key was not held, move the selection
@@ -689,7 +762,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		if (![self.selectedColumnIndexes containsIndex:column]) {
 			self.selectedColumnIndexes = [NSIndexSet indexSetWithIndex:column];
 		}
-	
+		
 		row = [self previousNonGroupRowFromRow:row];
 		
 		self.selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:row];
@@ -698,10 +771,13 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		cellRect = [self convertRect:cellRect toView:self.contentView];
 		if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
 			cellRect.origin.x = self.contentView.visibleRect.origin.x;
-            [self scrollToArea:cellRect animate:NO];
+			[self scrollToArea:cellRect animate:NO];
 		}
 		else {
-			[self setNeedsDisplayInRect:cellRect];
+//			[self setNeedsDisplayInRect:cellRect];
+			if (self.numberOfFrozenColumns > 0) {
+				[self.frozenContentView setNeedsDisplay:YES];
+			}
 		}
 	}
 }
@@ -713,23 +789,23 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	}
 	
 	if (shouldOverrideModifiers) {
-		[self moveLeft:sender];
+		[self moveUp:sender];
 		shouldOverrideModifiers = NO;
 		return;
 	}
-
+	
 	NSUInteger firstRow = [self.selectedRowIndexes firstIndex];
 	NSUInteger lastRow = [self.selectedRowIndexes lastIndex];
-
+	
 	// If there is only one row selected, change the sticky edge to the bottom
 	if ([self.selectedRowIndexes count] == 1) {
 		stickyRowEdge = MBTableGridBottomEdge;
 	}
-
+	
 	// We can't expand past the last row
 	if (stickyRowEdge == MBTableGridBottomEdge && firstRow <= 0)
 		return;
-
+	
 	NSUInteger column = [self.selectedColumnIndexes firstIndex];
 	
 	
@@ -751,10 +827,10 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	cellRect = [self convertRect:cellRect toView:self.contentView];
 	if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
 		cellRect.origin.x = self.contentView.visibleRect.origin.x;
-        [self scrollToArea:cellRect animate:NO];
+		[self scrollToArea:cellRect animate:NO];
 	}
 	
-    [self.contentView setNeedsDisplay:YES];
+	[self.contentView setNeedsDisplay:YES];
 	[self.frozenContentView setNeedsDisplay:YES];
 	
 }
@@ -767,7 +843,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	
 	NSUInteger column = [self.selectedColumnIndexes firstIndex];
 	NSUInteger row = [self.selectedRowIndexes firstIndex];
-
+	
 	// Accomodate for the sticky edges
 	if (stickyColumnEdge == MBTableGridRightEdge) {
 		column = [self.selectedColumnIndexes lastIndex];
@@ -775,32 +851,55 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	if (stickyRowEdge == MBTableGridBottomEdge) {
 		row = [self.selectedRowIndexes lastIndex];
 	}
-
+	
 	// If we're already at the last row, do nothing
-	if (row >= (_numberOfRows - 1) || (row == (_numberOfRows - 1) && [self _isGroupRow:row + 1]))
+	if (row >= (_numberOfRows - 1) || (row == (_numberOfRows - 2) && [self _isGroupRow:row + 1])) {
+		
+		NSString *characters = self.keyEvent.charactersIgnoringModifiers;
+		
+		if (characters.length == 1) {
+			unichar keyChar = [characters characterAtIndex:0];
+			
+			if (keyChar == NSEnterCharacter || keyChar == NSCarriageReturnCharacter) {
+				if ([self.dataSource respondsToSelector:@selector(tableGrid:addRows:)]) {
+					[self.dataSource tableGrid:self addRows:1];
+				}
+			}
+			
+		}
+		
+		[self setNeedsDisplay:YES];
+		
 		return;
-
+	}
+	
 	if (row + 1 < [self numberOfRows]) {
 		
 		// moving down, but next row is a group row, so go to the next non-group row
 		row = [self nextNonGroupRowFromRow:row];
-
+		
 		// If the Shift key was not held, move the selection
 		if (![self.selectedColumnIndexes containsIndex:column]) {
 			self.selectedColumnIndexes = [NSIndexSet indexSetWithIndex:column];
 		}
 		self.selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:row];
-
+		
 		NSRect cellRect = [self frameOfCellAtColumn:column row:row];
-        cellRect = [self convertRect:cellRect toView:self.contentView];
+		cellRect = [self convertRect:cellRect toView:self.contentView];
 		if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
-            cellRect.origin.y = cellRect.origin.y - self.contentView.visibleRect.size.height + cellRect.size.height;
+			cellRect.origin.y = cellRect.origin.y - self.contentView.visibleRect.size.height + cellRect.size.height;
 			cellRect.origin.x = self.contentView.visibleRect.origin.x;
-            [self scrollToArea:cellRect animate:NO];
+			[self scrollToArea:cellRect animate:NO];
 		}
 		else {
-			[self setNeedsDisplayInRect:cellRect];
+//			[self setNeedsDisplayInRect:cellRect];
+			if (self.numberOfFrozenColumns > 0) {
+				[self.frozenContentView setNeedsDisplay:YES];
+			}
+			
 		}
+	} else {
+		[self setNeedsDisplay:YES];
 	}
 }
 
@@ -815,26 +914,26 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		shouldOverrideModifiers = NO;
 		return;
 	}
-
+	
 	NSUInteger firstRow = [self.selectedRowIndexes firstIndex];
 	NSUInteger lastRow = [self.selectedRowIndexes lastIndex];
-
+	
 	// If there is only one row selected, change the sticky edge to the top
 	if ([self.selectedRowIndexes count] == 1) {
 		stickyRowEdge = MBTableGridTopEdge;
 	}
-
+	
 	// We can't expand past the last row
 	if (stickyRowEdge == MBTableGridTopEdge && lastRow >= (_numberOfRows - 1))
 		return;
-
+	
 	NSUInteger column = [self.selectedColumnIndexes lastIndex];
-
+	
 	if (lastRow + 1 < [self numberOfRows]) {
 		
 		// moving down, but next row is a group row, so go to the next non-group row
 		lastRow = [self nextNonGroupRowFromRow:lastRow];
-
+		
 		if (firstSelectedRow == firstRow || self.selectedRowIndexes.count == 1) {
 			[self.selectedRowIndexes addIndex:lastRow];
 			
@@ -843,16 +942,16 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 				[self.selectedRowIndexes removeIndex:firstRow];
 			}
 		}
-
+		
 		NSRect cellRect = [self frameOfCellAtColumn:column row:lastRow + 1];
-        cellRect = [self convertRect:cellRect toView:self.contentView];
+		cellRect = [self convertRect:cellRect toView:self.contentView];
 		if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
-            cellRect.origin.y = cellRect.origin.y - self.contentView.visibleRect.size.height + cellRect.size.height;
+			cellRect.origin.y = cellRect.origin.y - self.contentView.visibleRect.size.height + cellRect.size.height;
 			cellRect.origin.x = self.contentView.visibleRect.origin.x;
-            [self scrollToArea:cellRect animate:NO];
+			[self scrollToArea:cellRect animate:NO];
 		}
 		
-        [self.contentView setNeedsDisplay:YES];
+		[self.contentView setNeedsDisplay:YES];
 		[self.frozenContentView setNeedsDisplay:YES];
 	}
 }
@@ -865,7 +964,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	
 	NSUInteger column = [self.selectedColumnIndexes firstIndex];
 	NSUInteger row = [self.selectedRowIndexes firstIndex];
-
+	
 	// Accomodate for the sticky edges
 	if (stickyColumnEdge == MBTableGridRightEdge) {
 		column = [self.selectedColumnIndexes lastIndex];
@@ -873,25 +972,31 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	if (stickyRowEdge == MBTableGridBottomEdge) {
 		row = [self.selectedRowIndexes lastIndex];
 	}
-
+	
 	if (column > 0) {
 		NSRect cellRect = [self frameOfCellAtColumn:column - 1 row:row];
-        cellRect = [self convertRect:cellRect toView:contentScrollView.contentView];
-        
-        if (![self scrollForFrozenColumnsFromColumn:column right:NO]) {
-            if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
-                cellRect.origin.y = self.contentView.visibleRect.origin.y;
-                [self scrollToArea:cellRect animate:NO];
-            } else {
-                [self setNeedsDisplayInRect:cellRect];
-            }
-        }
+		cellRect = [self convertRect:cellRect toView:contentScrollView.contentView];
+		
+		if (![self scrollForFrozenColumnsFromColumn:column right:NO]) {
+			if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
+				cellRect.origin.y = self.contentView.visibleRect.origin.y;
+				[self scrollToArea:cellRect animate:NO];
+			} else {
+				
+				[self setNeedsDisplayInRect:cellRect];
+				if (self.numberOfFrozenColumns > 0) {
+					[self.frozenContentView setNeedsDisplay:YES];
+					[self.frozenColumnHeaderView setNeedsDisplay:YES];
+				}
+			}
+		}
 	}
-
+	
 	// If we're already at the first column, do nothing
-	if (column <= 0)
+	if (column == 0) {
 		return;
-
+	}
+	
 	// If the Shift key was not held, move the selection
 	self.selectedColumnIndexes = [NSIndexSet indexSetWithIndex:(column - 1)];
 	if (![self.selectedRowIndexes containsIndex:row]) {
@@ -910,36 +1015,36 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		shouldOverrideModifiers = NO;
 		return;
 	}
-
+	
 	NSUInteger firstColumn = [self.selectedColumnIndexes firstIndex];
 	NSUInteger lastColumn = [self.selectedColumnIndexes lastIndex];
-
+	
 	// If there is only one column selected, change the sticky edge to the right
 	if ([self.selectedColumnIndexes count] == 1) {
 		stickyColumnEdge = MBTableGridRightEdge;
 	}
-
+	
 	NSUInteger row = [self.selectedRowIndexes firstIndex];
-
+	
 	if (firstColumn > 0) {
 		NSRect cellRect = [self frameOfCellAtColumn:firstColumn - 1 row:row];
-        cellRect = [self convertRect:cellRect toView:contentScrollView.contentView];
-        
-        if (![self scrollForFrozenColumnsFromColumn:firstColumn right:NO]) {
-            if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
-                cellRect.origin.y = self.contentView.visibleRect.origin.y;
-                [self scrollToArea:cellRect animate:NO];
-            }
-        }
-        
+		cellRect = [self convertRect:cellRect toView:contentScrollView.contentView];
+		
+		if (![self scrollForFrozenColumnsFromColumn:firstColumn right:NO]) {
+			if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
+				cellRect.origin.y = self.contentView.visibleRect.origin.y;
+				[self scrollToArea:cellRect animate:NO];
+			}
+		}
+		
 		[self.contentView setNeedsDisplay:YES];
 	}
-
-
+	
+	
 	// We can't expand past the first column
 	if (stickyColumnEdge == MBTableGridRightEdge && firstColumn <= 0)
 		return;
-
+	
 	if (stickyColumnEdge == MBTableGridLeftEdge) {
 		// If the top edge is sticky, contract the selection
 		lastColumn--;
@@ -959,7 +1064,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	
 	NSUInteger column = [self.selectedColumnIndexes firstIndex];
 	NSUInteger row = [self.selectedRowIndexes firstIndex];
-
+	
 	// Accomodate for the sticky edges
 	if (stickyColumnEdge == MBTableGridRightEdge) {
 		column = [self.selectedColumnIndexes lastIndex];
@@ -967,31 +1072,44 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	if (stickyRowEdge == MBTableGridBottomEdge) {
 		row = [self.selectedRowIndexes lastIndex];
 	}
-
+	
 	// If we're already at the last column, do nothing
-	if (column >= (_numberOfColumns - 1))
+	if (column >= (_numberOfColumns - 1)) {
+		[self setNeedsDisplay:YES];
 		return;
-
+	}
+	
 	// If the Shift key was not held, move the selection
 	self.selectedColumnIndexes = [NSIndexSet indexSetWithIndex:(column + 1)];
 	if (![self.selectedRowIndexes containsIndex:row]) {
 		self.selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:row];
 	}
-
+	
 	if (column + 1 < [self numberOfColumns]) {
 		NSRect cellRect = [self frameOfCellAtColumn:column + 1 row:row];
 		cellRect = [self convertRect:cellRect toView:contentScrollView.contentView];
-        
-        if (![self scrollForFrozenColumnsFromColumn:column right:YES]) {
-            if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
-                cellRect.origin.x = cellRect.origin.x - self.contentView.visibleRect.size.width + cellRect.size.width;
-                cellRect.origin.y = self.contentView.visibleRect.origin.y;
-                [self scrollToArea:cellRect animate:NO];
-            } else {
-                [self setNeedsDisplayInRect:cellRect];
-            }
-        }
-    }
+		
+		if (![self scrollForFrozenColumnsFromColumn:column right:YES]) {
+			if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
+				cellRect.origin.x = cellRect.origin.x - self.contentView.visibleRect.size.width + cellRect.size.width;
+				cellRect.origin.y = self.contentView.visibleRect.origin.y;
+				[self scrollToArea:cellRect animate:NO];
+			} else {
+
+				[self setNeedsDisplayInRect:cellRect];
+				if (self.numberOfFrozenColumns > 0) {
+					[self.frozenContentView setNeedsDisplay:YES];
+					[self.frozenColumnHeaderView setNeedsDisplay:YES];
+				}
+				
+			}
+		} else {
+			if (self.numberOfFrozenColumns > 0) {
+				[self.frozenContentView setNeedsDisplay:YES];
+				[self.frozenColumnHeaderView setNeedsDisplay:YES];
+			}
+		}
+	}
 }
 
 - (void)moveRightAndModifySelection:(id)sender {
@@ -1005,19 +1123,19 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		shouldOverrideModifiers = NO;
 		return;
 	}
-
+	
 	NSUInteger firstColumn = [self.selectedColumnIndexes firstIndex];
 	NSUInteger lastColumn = [self.selectedColumnIndexes lastIndex];
-
+	
 	// If there is only one column selected, change the sticky edge to the right
 	if ([self.selectedColumnIndexes count] == 1) {
 		stickyColumnEdge = MBTableGridLeftEdge;
 	}
-
+	
 	// We can't expand past the last column
 	if (stickyColumnEdge == MBTableGridLeftEdge && lastColumn >= (_numberOfColumns - 1))
 		return;
-
+	
 	if (stickyColumnEdge == MBTableGridLeftEdge) {
 		// If the top edge is sticky, contract the selection
 		lastColumn++;
@@ -1027,21 +1145,21 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		firstColumn++;
 	}
 	self.selectedColumnIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(firstColumn, lastColumn - firstColumn + 1)];
-
+	
 	NSUInteger row = [self.selectedRowIndexes lastIndex];
-
+	
 	if (lastColumn + 1 < [self numberOfColumns]) {
 		NSRect cellRect = [self frameOfCellAtColumn:lastColumn + 1 row:row];
 		cellRect = [self convertRect:cellRect toView:contentScrollView.contentView];
-        
-        if (![self scrollForFrozenColumnsFromColumn:lastColumn right:YES]) {
-            if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
-                cellRect.origin.x = cellRect.origin.x - self.contentView.visibleRect.size.width + cellRect.size.width;
-                cellRect.origin.y = self.contentView.visibleRect.origin.y;
-                [self scrollToArea:cellRect animate:NO];
-            }
-        }
-        
+		
+		if (![self scrollForFrozenColumnsFromColumn:lastColumn right:YES]) {
+			if (!NSContainsRect(self.contentView.visibleRect, cellRect)) {
+				cellRect.origin.x = cellRect.origin.x - self.contentView.visibleRect.size.width + cellRect.size.width;
+				cellRect.origin.y = self.contentView.visibleRect.origin.y;
+				[self scrollToArea:cellRect animate:NO];
+			}
+		}
+		
 		[self.contentView setNeedsDisplay:YES];
 	}
 }
@@ -1064,7 +1182,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (void)scrollToRow:(NSUInteger)rowIndex animate:(BOOL)shouldAnimate {
-    NSUInteger column = self.selectedColumnIndexes.firstIndex;
+	NSUInteger column = self.selectedColumnIndexes.firstIndex;
 	NSRect cellRect = [self.contentView frameOfCellAtColumn:column row:rowIndex];
 	[self scrollToArea:cellRect animate:shouldAnimate];
 }
@@ -1080,41 +1198,69 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (void)selectRow:(NSUInteger)rowIndex {
-	self.selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:rowIndex];
-	[self scrollToRow:rowIndex animate:YES];
+	if (rowIndex != NSNotFound) {
+		self.selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:rowIndex];
+		[self scrollToRow:rowIndex animate:YES];
+	}
 }
 
 - (void)selectRow:(NSUInteger)rowIndex column:(NSUInteger)columnIndex {
-	self.selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:rowIndex];
-	self.selectedColumnIndexes = [NSIndexSet indexSetWithIndex:columnIndex];
-	[self scrollToRow:rowIndex column:columnIndex animate:YES];
+	if (rowIndex != NSNotFound) {
+		self.selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:rowIndex];
+	}
+	if (columnIndex != NSNotFound) {
+		self.selectedColumnIndexes = [NSIndexSet indexSetWithIndex:columnIndex];
+	}
+	if (rowIndex != NSNotFound && columnIndex != NSNotFound) {
+		[self scrollToRow:rowIndex column:columnIndex animate:YES];
+	}
+}
+
+- (void)doubleClickRow:(NSUInteger)rowIndex {
+	if ([self.delegate respondsToSelector:@selector(tableGrid:didDoubleClickRow:)]) {
+		[self.delegate tableGrid:self didDoubleClickRow:rowIndex];
+	}
+}
+
+- (void)doubleClickColumn:(NSUInteger)columnIndex {
+	if ([self.delegate respondsToSelector:@selector(tableGrid:didDoubleClickColumn:)]) {
+		[self.delegate tableGrid:self didDoubleClickColumn:columnIndex];
+	}
 }
 
 - (void)scrollToArea:(NSRect)area animate:(BOOL)shouldAnimate {
 	if (shouldAnimate) {
 		[NSAnimationContext runAnimationGroup: ^(NSAnimationContext *context) {
-		    [context setAllowsImplicitAnimation:YES];
-            [self.contentView scrollRectToVisible:area];
-		    [self.frozenContentView scrollRectToVisible:area];
+			[context setAllowsImplicitAnimation:YES];
+			[self.contentView scrollRectToVisible:area];
+			[self.frozenContentView scrollRectToVisible:area];
 		} completionHandler: ^{
 		}];
 	}
 	else {
-        [contentScrollView.contentView scrollToPoint:area.origin];
-        
-        NSRect frozenArea = area;
-        frozenArea.origin.x = 0;
-        
-        [frozenContentScrollView.contentView scrollToPoint:frozenArea.origin];
+		[contentScrollView.contentView scrollToPoint:area.origin];
 		
-        [self setNeedsDisplayInRect:area];
+		if (self.numberOfFrozenColumns > 0) {
+			NSRect frozenArea = area;
+			frozenArea.origin.x = 0;
+			
+			[frozenContentScrollView.contentView scrollToPoint:frozenArea.origin];
+//			NSUInteger row = [self.selectedRowIndexes firstIndex];
+//			NSRect rowRect = [self rectOfRow:row];
+//			[self.contentView setNeedsDisplay:YES];
+			[self setNeedsDisplay:YES];
+//			[self.frozenContentView setNeedsDisplay:YES];
+		}
 	}
+	
+	[contentScrollView reflectScrolledClipView: [contentScrollView contentView]];
+	
 }
 
 - (void)selectAll:(id)sender {
 	stickyColumnEdge = MBTableGridLeftEdge;
 	stickyRowEdge = MBTableGridTopEdge;
-
+	
 	self.selectedColumnIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, _numberOfColumns)];
 	self.selectedRowIndexes = [NSMutableIndexSet indexSetWithIndexesInRange:NSMakeRange(0, _numberOfRows)];
 }
@@ -1130,7 +1276,10 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	while (column <= [self.selectedColumnIndexes lastIndex]) {
 		NSUInteger row = [self.selectedRowIndexes firstIndex];
 		while (row <= [self.selectedRowIndexes lastIndex]) {
-			[self _setObjectValue:nil forColumn:column row:row undoTitle:@"Clear"];
+			BOOL canEdit = [self _canEditCellAtColumn:column row:row];
+			if (canEdit || [self _accessoryButtonImageForColumn:column row:row]) {
+				[self _setObjectValue:nil forColumn:column row:row undoTitle:@"Clear"];
+			}
 			row++;
 		}
 		column++;
@@ -1142,29 +1291,29 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	NSUInteger column = [self.selectedColumnIndexes firstIndex];
 	NSCell *selectedCell = [self _cellForColumn:column];
 	NSUInteger row = [self.selectedRowIndexes firstIndex];
-
-    MBTableGridContentView *columnContentView = [self contentViewForColumn:column];
+	
+	MBTableGridContentView *columnContentView = [self contentViewForColumn:column];
 	BOOL isImageCell = [selectedCell isKindOfClass:[MBImageCell class]];
 	BOOL canEdit = [self _canEditCellAtColumn:column row:row];
 	
 	if (!isImageCell && canEdit) {
-        
+		
 		[columnContentView editSelectedCell:self text:aString];
 		
 		if ([selectedCell isKindOfClass:[MBTableGridCell class]]) {
-            NSText *fieldEditor = [[self window] fieldEditor:YES forObject:columnContentView];
-            fieldEditor.delegate = columnContentView;
-            
-            if ([aString isEqualToString:@"\n"]) {
-                // Select the existing string
-                fieldEditor.selectedRange = NSMakeRange(fieldEditor.string.length, 0);
-            } else {
-                // Insert the typed string into the field editor
-                [fieldEditor setString:aString];
-                
-                // The textDidBeginEditing notification isn't sent yet, so invoke a custom method
-                [columnContentView textDidBeginEditingWithEditor:fieldEditor];
-            }
+			NSText *fieldEditor = [[self window] fieldEditor:YES forObject:columnContentView];
+			fieldEditor.delegate = columnContentView;
+			
+			if ([aString isEqualToString:@"\n"]) {
+				// Select the existing string
+				fieldEditor.selectedRange = NSMakeRange(fieldEditor.string.length, 0);
+			} else {
+				// Insert the typed string into the field editor
+				[fieldEditor setString:aString];
+				
+				// The textDidBeginEditing notification isn't sent yet, so invoke a custom method
+				[columnContentView textDidBeginEditingWithEditor:fieldEditor];
+			}
 		}
 		
 	} else {
@@ -1173,9 +1322,9 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	
 	NSRect cellRect = [self frameOfCellAtColumn:column row:row];
 	cellRect = [self convertRect:cellRect toView:columnContentView];
-
+	
 	[self setNeedsDisplayInRect:cellRect];
-
+	
 }
 
 #pragma mark -
@@ -1186,96 +1335,100 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (void)syncronizeScrollView:(NSScrollView *)scrollView withChangedBoundsOrigin:(NSPoint)changedBoundsOrigin horizontal:(BOOL)horizontal {
-    
-    if (self.syncronizingScroll || (horizontal && scrollView == frozenContentScrollView)) {
-        return;
-    }
-    
-    self.syncronizingScroll = YES;
-    
-    // Get the current origin
-    NSPoint curOffset = [[scrollView contentView] bounds].origin;
-    NSPoint newOffset = curOffset;
-    
-    if (horizontal) {
-        newOffset.x = changedBoundsOrigin.x;
-    } else {
-        newOffset.y = changedBoundsOrigin.y;
-    }
-    
-    // If the synced position is different from our current position, reposition the view
-    if (!NSEqualPoints(curOffset, changedBoundsOrigin)) {
-        [[scrollView contentView] scrollToPoint:newOffset];
-        // We have to tell the NSScrollView to update its scrollers
-        [scrollView reflectScrolledClipView:[scrollView contentView]];
-    }
-    
-    [self updateShadows];
-    
-    self.syncronizingScroll = NO;
+	
+	if (self.syncronizingScroll || (horizontal && scrollView == frozenContentScrollView)) {
+		return;
+	}
+	
+	self.syncronizingScroll = YES;
+	
+	// Get the current origin
+	NSPoint curOffset = [[scrollView contentView] bounds].origin;
+	NSPoint newOffset = curOffset;
+	
+	if (horizontal) {
+		newOffset.x = changedBoundsOrigin.x;
+	} else {
+		newOffset.y = changedBoundsOrigin.y;
+	}
+	
+	// If the synced position is different from our current position, reposition the view
+	if (!NSEqualPoints(curOffset, changedBoundsOrigin)) {
+		[[scrollView contentView] scrollToPoint:newOffset];
+		// We have to tell the NSScrollView to update its scrollers
+		[scrollView reflectScrolledClipView:[scrollView contentView]];
+	}
+	
+	[self updateShadows];
+	
+	self.syncronizingScroll = NO;
 }
 
 - (void)columnHeaderViewDidScroll:(NSNotification *)aNotification {
-    
+	
 	NSView *changedView = [aNotification object];
 	NSPoint changedBoundsOrigin = [changedView bounds].origin;
-
-    [self syncronizeScrollView:contentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
-    [self syncronizeScrollView:frozenContentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
-    [self syncronizeScrollView:rowHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
-    [self syncronizeScrollView:columnFooterScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
-    
+	
+	[self syncronizeScrollView:contentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
+	[self syncronizeScrollView:frozenContentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
+	[self syncronizeScrollView:rowHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
+	[self syncronizeScrollView:columnFooterScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
+	
+	[self.window invalidateCursorRectsForView:self];
 }
 
 - (void)rowHeaderViewDidScroll:(NSNotification *)aNotification {
-    
-    NSView *changedView = [aNotification object];
-    NSPoint changedBoundsOrigin = [changedView bounds].origin;
-    
-    [self syncronizeScrollView:contentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
-    [self syncronizeScrollView:frozenContentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
-    
+	
+	NSView *changedView = [aNotification object];
+	NSPoint changedBoundsOrigin = [changedView bounds].origin;
+	
+	[self syncronizeScrollView:contentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
+	[self syncronizeScrollView:frozenContentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
+	
+	[self.window invalidateCursorRectsForView:self];
 }
 
 - (void)columnFooterViewDidScroll:(NSNotification *)aNotification {
-    
-    NSView *changedView = [aNotification object];
-    NSPoint changedBoundsOrigin = [changedView bounds].origin;
-    
-    [self syncronizeScrollView:contentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
-    [self syncronizeScrollView:frozenContentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
-    [self syncronizeScrollView:columnHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
-    [self syncronizeScrollView:rowHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
-    
+	
+	NSView *changedView = [aNotification object];
+	NSPoint changedBoundsOrigin = [changedView bounds].origin;
+	
+	[self syncronizeScrollView:contentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
+	[self syncronizeScrollView:frozenContentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
+	[self syncronizeScrollView:columnHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
+	[self syncronizeScrollView:rowHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
+	
+	[self.window invalidateCursorRectsForView:self];
 }
 
 - (void)contentViewDidScroll:(NSNotification *)aNotification {
-    
-    NSView *changedView = [aNotification object];
-    NSPoint changedBoundsOrigin = [changedView bounds].origin;
-    
-    [self syncronizeScrollView:frozenContentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
-    [self syncronizeScrollView:columnHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
-    [self syncronizeScrollView:rowHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
-    [self syncronizeScrollView:columnFooterScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
-    
+	
+	NSView *changedView = [aNotification object];
+	NSPoint changedBoundsOrigin = [changedView bounds].origin;
+	
+	[self syncronizeScrollView:frozenContentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
+	[self syncronizeScrollView:columnHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
+	[self syncronizeScrollView:rowHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
+	[self syncronizeScrollView:columnFooterScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
+	
+	[self.window invalidateCursorRectsForView:self];
 }
 
 - (void)frozenContentViewDidScroll:(NSNotification *)aNotification {
-    
-    NSView *changedView = [aNotification object];
-    NSPoint changedBoundsOrigin = [changedView bounds].origin;
-    
-    [self syncronizeScrollView:contentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
-    [self syncronizeScrollView:columnHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
-    [self syncronizeScrollView:rowHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
-    [self syncronizeScrollView:columnFooterScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
-    
+	
+	NSView *changedView = [aNotification object];
+	NSPoint changedBoundsOrigin = [changedView bounds].origin;
+	
+	[self syncronizeScrollView:contentScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
+	[self syncronizeScrollView:columnHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
+	[self syncronizeScrollView:rowHeaderScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:NO];
+	[self syncronizeScrollView:columnFooterScrollView withChangedBoundsOrigin:changedBoundsOrigin horizontal:YES];
+	
 }
 
 - (void)didUndoOrRedo:(NSNotification *)aNotification {
-    
-    [self reloadData];
+	
+	[self reloadData];
 }
 
 #pragma mark -
@@ -1284,27 +1437,27 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 #pragma mark NSDraggingSource
 
 -(NSDragOperation)draggingSession:(NSDraggingSession *)session sourceOperationMaskForDraggingContext:(NSDraggingContext)context {
-    
-    switch(context) {
-        case NSDraggingContextOutsideApplication:
-            return NSDragOperationNone;
-            break;
-            
-        case NSDraggingContextWithinApplication:
-        default:
-            return NSDragOperationMove;
-            break;
-    }
+	
+	switch(context) {
+		case NSDraggingContextOutsideApplication:
+			return NSDragOperationNone;
+			break;
+			
+		case NSDraggingContextWithinApplication:
+		default:
+			return NSDragOperationMove;
+			break;
+	}
 }
 
 #pragma mark NSDraggingDestination
 
 - (NSDragOperation)draggingEntered:(id <NSDraggingInfo> )sender {
 	NSPasteboard *pboard = [sender draggingPasteboard];
-
+	
 	NSData *columnData = [pboard dataForType:MBTableGridColumnDataType];
 	NSData *rowData = [pboard dataForType:MBTableGridRowDataType];
-
+	
 	if (columnData) {
 		return NSDragOperationMove;
 	}
@@ -1316,20 +1469,20 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 			NSPoint mouseLocation = [self convertPoint:[sender draggingLocation] fromView:nil];
 			NSUInteger dropColumn = [self columnAtPoint:mouseLocation];
 			NSUInteger dropRow = [self rowAtPoint:mouseLocation];
-            MBTableGridContentView *columnContentView = [self contentViewForColumn:dropColumn];
-
+			MBTableGridContentView *columnContentView = [self contentViewForColumn:dropColumn];
+			
 			NSDragOperation dragOperation = [[self dataSource] tableGrid:self validateDrop:sender proposedColumn:dropColumn row:dropRow];
-
+			
 			// If the drag is okay, highlight the appropriate cell
 			if (dragOperation != NSDragOperationNone) {
 				[columnContentView _setDropColumn:dropColumn];
 				[columnContentView _setDropRow:dropRow];
 			}
-
+			
 			return dragOperation;
 		}
 	}
-
+	
 	return NSDragOperationNone;
 }
 
@@ -1338,26 +1491,31 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	NSData *columnData = [pboard dataForType:MBTableGridColumnDataType];
 	NSData *rowData = [pboard dataForType:MBTableGridRowDataType];
 	NSPoint mouseLocation = [self convertPoint:[sender draggingLocation] fromView:nil];
-
+	
+	// Do not accept drag if this doesn't come from us
+	if ([sender draggingSource] != self) {
+		return NSDragOperationNone;
+	}
+	
 	if (columnData) {
 		// If we're dragging a column
-
+		
 		NSUInteger dropColumn = [self _dropColumnForPoint:mouseLocation];
-
+		
 		if (dropColumn == NSNotFound) {
 			return NSDragOperationNone;
 		}
-
+		
 		NSIndexSet *draggedColumns = (NSIndexSet *)[NSKeyedUnarchiver unarchiveObjectWithData:columnData];
-
+		
 		BOOL canDrop = NO;
 		if ([[self dataSource] respondsToSelector:@selector(tableGrid:canMoveColumns:toIndex:)]) {
 			canDrop = [[self dataSource] tableGrid:self canMoveColumns:draggedColumns toIndex:dropColumn];
 		}
-
+		
 		[contentView _setDraggingColumnOrRow:YES];
 		[frozenContentView _setDraggingColumnOrRow:YES];
-
+		
 		if (canDrop) {
 			[contentView _setDropColumn:dropColumn];
 			[frozenContentView _setDropColumn:dropColumn];
@@ -1370,23 +1528,23 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	}
 	else if (rowData) {
 		// If we're dragging a row
-
+		
 		NSUInteger dropRow = [self _dropRowForPoint:mouseLocation];
-
+		
 		if (dropRow == NSNotFound) {
 			return NSDragOperationNone;
 		}
-
-		NSIndexSet *draggedRows = (NSIndexSet *)[NSKeyedUnarchiver unarchiveObjectWithData:rowData];
-
+		
+		NSMutableIndexSet *draggedRows = [[NSKeyedUnarchiver unarchiveObjectWithData:rowData] mutableCopy];
+		
 		BOOL canDrop = NO;
 		if ([[self dataSource] respondsToSelector:@selector(tableGrid:canMoveRows:toIndex:)]) {
 			canDrop = [[self dataSource] tableGrid:self canMoveRows:draggedRows toIndex:dropRow];
 		}
-
+		
 		[contentView _setDraggingColumnOrRow:YES];
 		[frozenContentView _setDraggingColumnOrRow:YES];
-
+		
 		if (canDrop) {
 			[contentView _setDropRow:dropRow];
 			[frozenContentView _setDropRow:dropRow];
@@ -1401,12 +1559,12 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		if ([[self dataSource] respondsToSelector:@selector(tableGrid:validateDrop:proposedColumn:row:)]) {
 			NSUInteger dropColumn = [self columnAtPoint:mouseLocation];
 			NSUInteger dropRow = [self rowAtPoint:mouseLocation];
-
+			
 			[contentView _setDraggingColumnOrRow:NO];
 			[frozenContentView _setDraggingColumnOrRow:NO];
-
+			
 			NSDragOperation dragOperation = [[self dataSource] tableGrid:self validateDrop:sender proposedColumn:dropColumn row:dropRow];
-
+			
 			// If the drag is okay, highlight the appropriate cell
 			if (dragOperation != NSDragOperationNone) {
 				[contentView _setDropColumn:dropColumn];
@@ -1414,7 +1572,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 				[contentView _setDropRow:dropRow];
 				[frozenContentView _setDropRow:dropRow];
 			}
-
+			
 			return dragOperation;
 		}
 	}
@@ -1444,36 +1602,36 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	NSData *columnData = [pboard dataForType:MBTableGridColumnDataType];
 	NSData *rowData = [pboard dataForType:MBTableGridRowDataType];
 	NSPoint mouseLocation = [self convertPoint:[sender draggingLocation] fromView:nil];
-
+	
 	if (columnData) {
 		// If we're dragging a column
 		if ([[self dataSource] respondsToSelector:@selector(tableGrid:moveColumns:toIndex:)]) {
 			// Get which columns are being dragged
 			NSIndexSet *draggedColumns = (NSIndexSet *)[NSKeyedUnarchiver unarchiveObjectWithData:columnData];
-
+			
 			// Get the index to move the columns to
 			NSUInteger dropColumn = [self _dropColumnForPoint:mouseLocation];
-
+			
 			// Tell the data source to move the columns
 			BOOL didDrag = [[self dataSource] tableGrid:self moveColumns:draggedColumns toIndex:dropColumn];
-
+			
 			if (didDrag) {
 				NSUInteger startIndex = dropColumn;
 				NSUInteger length = [draggedColumns count];
-
+				
 				if (dropColumn > [draggedColumns firstIndex]) {
 					startIndex -= [draggedColumns count];
 				}
-
+				
 				NSIndexSet *newColumns = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(startIndex, length)];
-
+				
 				// Post the notification
 				[[NSNotificationCenter defaultCenter] postNotificationName:MBTableGridDidMoveColumnsNotification object:self userInfo:@{ @"OldColumns": draggedColumns, @"NewColumns": newColumns }];
-
+				
 				// Change the selection to reflect the newly-dragged columns
 				self.selectedColumnIndexes = newColumns;
 			}
-
+			
 			return didDrag;
 		}
 	}
@@ -1482,30 +1640,30 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		if ([[self dataSource] respondsToSelector:@selector(tableGrid:moveRows:toIndex:)]) {
 			// Get which rows are being dragged
 			NSIndexSet *draggedRows = (NSIndexSet *)[NSKeyedUnarchiver unarchiveObjectWithData:rowData];
-
+			
 			// Get the index to move the rows to
 			NSUInteger dropRow = [self _dropRowForPoint:mouseLocation];
-
+			
 			// Tell the data source to move the rows
 			BOOL didDrag = [[self dataSource] tableGrid:self moveRows:draggedRows toIndex:dropRow];
-
+			
 			if (didDrag) {
 				NSUInteger startIndex = dropRow;
 				NSUInteger length = [draggedRows count];
-
+				
 				if (dropRow > [draggedRows firstIndex]) {
 					startIndex -= [draggedRows count];
 				}
-
+				
 				NSMutableIndexSet *newRows = [NSMutableIndexSet indexSetWithIndexesInRange:NSMakeRange(startIndex, length)];
-
+				
 				// Post the notification
 				[[NSNotificationCenter defaultCenter] postNotificationName:MBTableGridDidMoveRowsNotification object:self userInfo:@{ @"OldRows": draggedRows, @"NewRows": newRows }];
-
+				
 				// Change the selection to reflect the newly-dragged rows
 				self.selectedRowIndexes = newRows;
 			}
-
+			
 			return didDrag;
 		}
 	}
@@ -1513,14 +1671,14 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		if ([[self dataSource] respondsToSelector:@selector(tableGrid:acceptDrop:column:row:)]) {
 			NSUInteger dropColumn = [self columnAtPoint:mouseLocation];
 			NSUInteger dropRow = [self rowAtPoint:mouseLocation];
-
+			
 			// Pass the drag to the data source
 			BOOL didPerformDrag = [[self dataSource] tableGrid:self acceptDrop:sender column:dropColumn row:dropRow];
-
+			
 			return didPerformDrag;
 		}
 	}
-
+	
 	return NO;
 }
 
@@ -1540,12 +1698,12 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 #pragma mark Reloading the Grid
 
 - (void)populateColumnInfo {
-    if (columnIndexNames.count < _numberOfColumns) {
-        for (NSUInteger columnIndex = columnIndexNames.count; columnIndex < _numberOfColumns; columnIndex++) {
-            NSString *column = [NSString stringWithFormat:@"column%lu", columnIndex];
-            columnIndexNames[columnIndex] = column;
-        }
-    }
+	if (columnIndexNames && columnIndexNames.count < _numberOfColumns) {
+		for (NSUInteger columnIndex = columnIndexNames.count; columnIndex < _numberOfColumns; columnIndex++) {
+			NSString *column = [NSString stringWithFormat:@"column%lu", columnIndex];
+			columnIndexNames[columnIndex] = column;
+		}
+	}
 }
 
 - (void)reloadData {
@@ -1556,7 +1714,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	else {
 		_numberOfColumns = 0;
 	}
-
+	
 	// Set number of rows
 	if ([[self dataSource] respondsToSelector:@selector(numberOfRowsInTableGrid:)]) {
 		_numberOfRows =  [[self dataSource] numberOfRowsInTableGrid:self];
@@ -1613,126 +1771,136 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		
 		[self setSelectedColumnIndexes:validatedColumnIndexes];
 	}
-
+	
 	columnWidths = [NSMutableDictionary new];
 	[self.columnRects removeAllObjects];
 	
-    [self populateColumnInfo];
+	[self populateColumnInfo];
 	
 	// Update the content view's size
-	NSRect contentRect = NSZeroRect;
+	NSRect contentRect = self.frame;
 	
 	if (_numberOfColumns > 0 && _numberOfRows > 0) {
-		NSUInteger lastColumn = _numberOfColumns-1; // _numberOfColumns must be > 0
+		NSUInteger lastColumn = _numberOfColumns; // _numberOfColumns must be > 0
 		NSUInteger lastRow = _numberOfRows-1; // _numberOfRows must be > 0
 		NSRect bottomRightCellFrame = [contentView frameOfCellAtColumn:lastColumn row:lastRow];
 		
 		contentRect = NSMakeRect([contentView frame].origin.x, [contentView frame].origin.y, NSMaxX(bottomRightCellFrame) + MBTableGridContentViewPadding, NSMaxY(bottomRightCellFrame));
 	}
 	
+	NSRect scrollViewSize = self.frame;
+	scrollViewSize.origin.y = 0;
+	scrollViewSize.size.height = self.frame.size.height - columnHeaderScrollView.contentSize.height - columnFooterScrollView.contentSize.height;
+	scrollViewSize.size.width = self.frame.size.width - rowHeaderScrollView.contentSize.width;
+	[contentScrollView setFrameSize:scrollViewSize.size];
+	
 	[contentView setFrameSize:contentRect.size];
-    
-    CGFloat frozenWidth = 0;
-    NSSize frozenScrollSize = frozenContentScrollView.bounds.size;
-    NSSize frozenSize = contentRect.size;
-    
-    if (self.freezeColumns && self.numberOfFrozenColumns > 0) {
-        for (NSUInteger column = 0; column < self.numberOfFrozenColumns; column++) {
-         frozenWidth += [self _widthForColumn:column];
-        }
-    }
-    
-    frozenScrollSize.width = frozenWidth;
-    frozenSize.width = frozenWidth;
-    
-    [frozenContentScrollView setFrameSize:frozenScrollSize];
-    [frozenContentView setFrameSize:frozenSize];
-    frozenContentScrollView.hidden = frozenSize.width == 0.0;
-    
+
+	CGFloat frozenWidth = 0;
+	NSSize frozenScrollSize = frozenContentScrollView.bounds.size;
+	NSSize frozenSize = contentRect.size;
+	
+	if (self.freezeColumns && self.numberOfFrozenColumns > 0) {
+		for (NSUInteger column = 0; column < self.numberOfFrozenColumns; column++) {
+			frozenWidth += [self _widthForColumn:column];
+		}
+	}
+	
+	frozenScrollSize.width = frozenWidth;
+	frozenSize.width = frozenWidth;
+	
+	[frozenContentScrollView setFrameSize:frozenScrollSize];
+	[frozenContentView setFrameSize:frozenSize];
+	frozenContentScrollView.hidden = frozenSize.width == 0.0;
+	
 	// Update the column header view's size
 	NSRect columnHeaderFrame = [columnHeaderView frame];
-	if (_numberOfRows > 0) {
-		columnHeaderFrame.size.width = contentRect.size.width;
-	}
+	columnHeaderFrame.size.width = contentRect.size.width;
+	
 	if (![[contentScrollView verticalScroller] isHidden]) {
-		columnHeaderFrame.size.width += [NSScroller scrollerWidthForControlSize:NSRegularControlSize
+		columnHeaderFrame.size.width += [NSScroller scrollerWidthForControlSize:NSControlSizeRegular
 																  scrollerStyle:NSScrollerStyleOverlay];
 	}
 	[columnHeaderView setFrameSize:columnHeaderFrame.size];
-
-    frozenSize = columnHeaderFrame.size;
-    frozenSize.width = frozenWidth;
-    
-    [frozenColumnHeaderView setFrameSize:frozenSize];
-    frozenColumnHeaderView.hidden = frozenSize.width == 0.0;
-    
+	
+	frozenSize = columnHeaderFrame.size;
+	frozenSize.width = frozenWidth;
+	
+	[frozenColumnHeaderView setFrameSize:frozenSize];
+	frozenColumnHeaderView.hidden = frozenSize.width == 0.0;
+	
 	// Update the row header view's size
 	NSRect rowHeaderFrame = [rowHeaderView frame];
-	rowHeaderFrame.size.height = contentRect.size.height;
+	rowHeaderFrame.size.height = MAX(contentRect.size.height, self.frame.size.height);
 	if (![[contentScrollView horizontalScroller] isHidden]) {
-		columnHeaderFrame.size.height += [NSScroller scrollerWidthForControlSize:NSRegularControlSize
+		rowHeaderFrame.size.height += [NSScroller scrollerWidthForControlSize:NSControlSizeRegular
 																   scrollerStyle:NSScrollerStyleOverlay];
 	}
 	[rowHeaderView setFrameSize:rowHeaderFrame.size];
 	
 	NSRect columnFooterFrame = [columnFooterView frame];
-	columnFooterFrame.size.width = contentRect.size.width;
+	CGFloat footerWidth = MAX(contentRect.size.width, self.frame.size.width);
+	columnFooterFrame.size.width = footerWidth;
+	
 	if (![[contentScrollView verticalScroller] isHidden]) {
-		columnFooterFrame.size.width += [NSScroller scrollerWidthForControlSize:NSRegularControlSize
+		columnFooterFrame.size.width += [NSScroller scrollerWidthForControlSize:NSControlSizeRegular
 																  scrollerStyle:NSScrollerStyleOverlay];
 	}
-	[columnFooterView setFrameSize:columnFooterFrame.size];
 	
-    frozenSize = columnFooterFrame.size;
-    frozenSize.width = frozenWidth;
-    
-    [frozenColumnFooterView setFrameSize:frozenSize];
-    frozenColumnFooterView.hidden = frozenSize.width == 0.0;
-    
-    // Update the shadow views' sizes
-    NSRect columnShadowFrame = [columnShadowView frame];
-    columnShadowFrame.size.width = columnHeaderFrame.size.width;
-    columnShadowView.frame = columnShadowFrame;
-    
-    NSRect rowShadowFrame = [rowShadowView frame];
-    rowShadowFrame.origin.x = MBTableGridRowHeaderWidth + frozenSize.width;
-    rowShadowFrame.size.height = rowHeaderFrame.size.height;
-    rowShadowView.frame = rowShadowFrame;
-    
-    [self updateShadows];
-    
+	CGPoint footerPoint = CGPointMake(MBTableGridRowHeaderWidth, self.frame.size.height - columnFooterFrame.size.height);
+	[columnFooterScrollView setFrameOrigin:footerPoint];
+	[columnFooterView setFrameSize:columnFooterFrame.size];
+	frozenSize = columnFooterFrame.size;
+	frozenSize.width = frozenWidth;
+	
+	[frozenColumnFooterView setFrameSize:frozenSize];
+	frozenColumnFooterView.hidden = frozenSize.width == 0.0;
+	
+	// Update the shadow views' sizes
+	NSRect columnShadowFrame = [columnShadowView frame];
+	columnShadowFrame.size.width = self.frame.size.width;
+	columnShadowView.frame = columnShadowFrame;
+	
+	NSRect rowShadowFrame = [rowShadowView frame];
+	rowShadowFrame.origin.x = MBTableGridRowHeaderWidth + frozenSize.width;
+	rowShadowFrame.size.height = rowHeaderFrame.size.height;
+	rowShadowView.frame = rowShadowFrame;
+	
+	[self updateShadows];
+	
 	contentView.groupHeadingRowIndexes = nil;
-    contentView.groupSummaryRowIndexes = nil;
-    frozenContentView.groupHeadingRowIndexes = nil;
+	contentView.groupSummaryRowIndexes = nil;
+	frozenContentView.groupHeadingRowIndexes = nil;
 	frozenContentView.groupSummaryRowIndexes = nil;
-    
+	
 	[self setNeedsDisplay:YES];
 }
 
 - (void)updateShadows {
-    NSPoint offset = contentScrollView.contentView.bounds.origin;
-    
-    columnShadowView.hidden = offset.y <= 0;
-    rowShadowView.hidden = offset.x <= 0;
+	NSPoint offset = contentScrollView.contentView.bounds.origin;
+	
+	columnShadowView.hidden = offset.y <= 0;
+	rowShadowView.hidden = offset.x <= 0;
+	
 }
 
 #pragma mark Layout Support
 
 - (NSRect)rectOfColumn:(NSUInteger)columnIndex {
-    MBTableGridContentView *columnContentView = [self contentViewForColumn:columnIndex];
+	MBTableGridContentView *columnContentView = [self contentViewForColumn:columnIndex];
 	NSRect rect = [self convertRect:[columnContentView rectOfColumn:columnIndex] fromView:columnContentView];
 	rect.origin.y = 0;
 	rect.size.height += MBTableGridColumnHeaderHeight;
 	if (rect.size.height > [self frame].size.height) {
 		rect.size.height = [self frame].size.height;
-
+		
 		// If the scrollbar is visible, don't include it in the rect
 		if (![[contentScrollView horizontalScroller] isHidden]) {
-			rect.size.height -= [NSScroller scrollerWidthForControlSize:NSRegularControlSize
+			rect.size.height -= [NSScroller scrollerWidthForControlSize:NSControlSizeRegular
 														  scrollerStyle:NSScrollerStyleOverlay];
 		}
 	}
-
+	
 	return rect;
 }
 
@@ -1740,12 +1908,12 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	NSRect rect = [self convertRect:[contentView rectOfRow:rowIndex] fromView:contentView];
 	rect.origin.x = 0;
 	rect.size.width += MBTableGridRowHeaderWidth;
-
+	
 	return rect;
 }
 
 - (NSRect)frameOfCellAtColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
-    MBTableGridContentView *columnContentView = [self contentViewForColumn:columnIndex];
+	MBTableGridContentView *columnContentView = [self contentViewForColumn:columnIndex];
 	return [self convertRect:[columnContentView frameOfCellAtColumn:columnIndex row:rowIndex] fromView:columnContentView];
 }
 
@@ -1779,28 +1947,40 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	return NSNotFound;
 }
 
+//- (NSInteger)rowAtPoint:(NSPoint)aPoint {
+//	NSInteger row = 0;
+//	while (row < _numberOfRows) {
+//		NSRect rowFrame = [self rectOfRow:row];
+//		if (NSPointInRect(aPoint, rowFrame)) {
+//			return row;
+//		}
+//		row++;
+//	}
+//	return NSNotFound;
+//}
+
 - (NSInteger)rowAtPoint:(NSPoint)aPoint {
-	NSInteger row = 0;
-	while (row < _numberOfRows) {
-		NSRect rowFrame = [self rectOfRow:row];
-		if (NSPointInRect(aPoint, rowFrame)) {
-			return row;
-		}
-		row++;
+	// aPoint is in MBTableGrid coordinates so we need to convert it to contentView
+	// coordinates, especially because contentView is scrollable.
+	CGPoint pointInContentViewCoordinates = [self convertPoint:aPoint toView:self.contentView];
+	NSInteger row = floor(pointInContentViewCoordinates.y / self.contentView.cellRowHeight);
+	if(row >= 0 && row <= _numberOfRows) {
+		return row;
 	}
+	
 	return NSNotFound;
 }
 
 - (NSInteger)groupHeadingRowForRow:(NSInteger)rowIndex {
-    while (rowIndex >= 0 && ![self _isGroupHeadingRow:rowIndex]) {
-        rowIndex--;
-    }
-    
-    if (rowIndex < 0) {
-        return NSNotFound;
-    } else {
-        return rowIndex;
-    }
+	while (rowIndex >= 0 && ![self _isGroupHeadingRow:rowIndex]) {
+		rowIndex--;
+	}
+	
+	if (rowIndex < 0) {
+		return NSNotFound;
+	} else {
+		return rowIndex;
+	}
 }
 
 #pragma mark Auxiliary Views
@@ -1810,11 +1990,11 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (MBTableGridHeaderView *)frozenColumnHeaderView {
-    return frozenColumnHeaderView;
+	return frozenColumnHeaderView;
 }
 
 - (MBTableGridFooterView *)frozenColumnFooterView {
-    return frozenColumnFooterView;
+	return frozenColumnFooterView;
 }
 
 - (MBTableGridHeaderView *)rowHeaderView {
@@ -1822,15 +2002,15 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (MBTableGridShadowView *)columnShadowView {
-    return columnShadowView;
+	return columnShadowView;
 }
 
 - (MBTableGridShadowView *)rowShadowView {
-    return rowShadowView;
+	return rowShadowView;
 }
 
 - (MBTableGridContentView *)contentView {
-    return contentView;
+	return contentView;
 }
 
 - (MBTableGridContentView *)frozenContentView {
@@ -1838,108 +2018,92 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (MBTableGridContentView *)contentViewForColumn:(NSUInteger)column {
-    if ([self isFrozenColumn:column]) {
-        return self.frozenContentView;
-    } else {
-        return self.contentView;
-    }
+	if ([self isFrozenColumn:column]) {
+		return self.frozenContentView;
+	} else {
+		return self.contentView;
+	}
 }
 
 - (CGFloat)frozenColumnsWidth {
-    return self.frozenContentView.bounds.size.width;
+	return self.frozenContentView.bounds.size.width;
 }
 
 - (BOOL)isFrozenColumn:(NSUInteger)column {
-    return self.freezeColumns && column < self.numberOfFrozenColumns;
+	return self.freezeColumns && column < self.numberOfFrozenColumns;
 }
 
 - (BOOL)scrollForFrozenColumnsFromColumn:(NSUInteger)fromColumn right:(BOOL)right {
-    if ((!right && fromColumn == 0) || (right && fromColumn >= self.numberOfColumns - 1)) {
-        return NO;
-    }
-    
-    NSUInteger toColumn = right ? fromColumn + 1 : fromColumn - 1;
-    
-    if ([self isFrozenColumn:toColumn] || toColumn == 0) {
-        return NO;
-    }
-    
-    BOOL wantScroll = NO;
-    NSPoint offset = contentScrollView.contentView.bounds.origin;
-    NSRect columnRect = [self frameOfCellAtColumn:toColumn row:0];
-    CGFloat contentColumnX = columnRect.origin.x - contentScrollView.frame.origin.x;
-    
-    if (!right && contentColumnX < [self frozenColumnsWidth]) {
-        // Moving left from unfrozen:
-        wantScroll = YES;
-        offset.x -= [self frozenColumnsWidth] - contentColumnX;
-    } else if (right && [self isFrozenColumn:fromColumn]) {
-        // Moving right to unfrozen:
-        wantScroll = YES;
-        offset.x = 0;
-    }
-    
-    if (wantScroll) {
-        [contentScrollView.contentView scrollToPoint:offset];
-        [contentScrollView reflectScrolledClipView:contentScrollView.contentView];
-    }
-    
-    return wantScroll;
+	if ((!right && fromColumn == 0) || (right && fromColumn >= self.numberOfColumns - 1)) {
+		return NO;
+	}
+	
+	NSUInteger toColumn = right ? fromColumn + 1 : fromColumn - 1;
+	
+	if ([self isFrozenColumn:toColumn] || toColumn == 0) {
+		return NO;
+	}
+	
+	BOOL wantScroll = NO;
+	NSPoint offset = contentScrollView.contentView.bounds.origin;
+	NSRect columnRect = [self frameOfCellAtColumn:toColumn row:0];
+	CGFloat contentColumnX = columnRect.origin.x - contentScrollView.frame.origin.x;
+	
+	if (!right && contentColumnX < [self frozenColumnsWidth]) {
+		// Moving left from unfrozen:
+		wantScroll = YES;
+		offset.x -= [self frozenColumnsWidth] - contentColumnX;
+	} else if (right && [self isFrozenColumn:fromColumn]) {
+		// Moving right to unfrozen:
+		wantScroll = YES;
+		offset.x = 0;
+	}
+	
+	if (wantScroll) {
+		[contentScrollView.contentView scrollToPoint:offset];
+		[contentScrollView reflectScrolledClipView:contentScrollView.contentView];
+	}
+	
+	return wantScroll;
 }
 
 #pragma mark - Overridden Property Accessors
 
 - (void)setSelectedColumnIndexes:(NSIndexSet *)anIndexSet {
-	if (anIndexSet == _selectedColumnIndexes)
+	if ([anIndexSet isEqualToIndexSet:_selectedColumnIndexes])
 		return;
-
-
-	// first, enumerate all the old inndexes, and call setNeedsdisplaayInRect on them.
-//	[selectedColumnIndexes enumerateIndexesUsingBlock: ^(NSUInteger column, BOOL *stop) {
-//	    [selectedRowIndexes enumerateIndexesUsingBlock: ^(NSUInteger row, BOOL *stop) {
-//	        NSRect oldRect = [self frameOfCellAtColumn:column row:row];
-//	        [self setNeedsDisplayInRect:oldRect];
-//		}];
-//	}];
-
+	
 	// Allow the delegate to validate the selection
 	if ([[self delegate] respondsToSelector:@selector(tableGrid:willSelectColumnsAtIndexPath:)]) {
 		anIndexSet = [[self delegate] tableGrid:self willSelectColumnsAtIndexPath:anIndexSet];
 	}
-
+	
 	_selectedColumnIndexes = anIndexSet;
-
+	
 	[self setNeedsDisplay:YES];
-	// then, enumerate all the new inndexes, and call setNeedsdisplaayInRect on them.
-//	[selectedColumnIndexes enumerateIndexesUsingBlock: ^(NSUInteger column, BOOL *stop) {
-//	    [selectedRowIndexes enumerateIndexesUsingBlock: ^(NSUInteger row, BOOL *stop) {
-//	        NSRect oldRect = [self frameOfCellAtColumn:column row:row];
-//	        [self setNeedsDisplayInRect:oldRect];
-//		}];
-//	}];
-
+	
 	// Post the notification
 	[[NSNotificationCenter defaultCenter] postNotificationName:MBTableGridDidChangeSelectionNotification object:self];
 	[[NSNotificationCenter defaultCenter] postNotificationName:MBTableGridDidChangeColumnSelectionNotification object:self];
 }
 
 - (void)setSelectedRowIndexes:(NSMutableIndexSet *)anIndexSet {
-	if (anIndexSet == _selectedRowIndexes)
+	if ([anIndexSet isEqualToIndexSet:_selectedRowIndexes])
 		return;
-
+	
 	// Allow the delegate to validate the selection
 	if ([[self delegate] respondsToSelector:@selector(tableGrid:willSelectRowsAtIndexPath:)]) {
 		anIndexSet = [[self delegate] tableGrid:self willSelectRowsAtIndexPath:anIndexSet];
 	}
-
+	
 	_selectedRowIndexes = anIndexSet;
-
+	
 	if (anIndexSet.count == 1) {
 		firstSelectedRow = anIndexSet.firstIndex;
 	}
 	
 	[self setNeedsDisplay:YES];
-
+	
 	// Post the notification
 	[[NSNotificationCenter defaultCenter] postNotificationName:MBTableGridDidChangeSelectionNotification object:self];
 	[[NSNotificationCenter defaultCenter] postNotificationName:MBTableGridDidChangeRowSelectionNotification object:self];
@@ -1948,7 +2112,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 - (void)setDelegate:(id <MBTableGridDelegate> )anObject {
 	if (anObject == _delegate)
 		return;
-
+	
 	if (_delegate) {
 		// Unregister the delegate for relavent notifications
 		[[NSNotificationCenter defaultCenter] removeObserver:_delegate name:MBTableGridDidChangeSelectionNotification object:self];
@@ -1958,9 +2122,9 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		[[NSNotificationCenter defaultCenter] removeObserver:_delegate name:MBTableGridDidMoveRowsNotification object:self];
 		[[NSNotificationCenter defaultCenter] removeObserver:_delegate name:MBTableGridDidResizeColumnNotification object:self];
 	}
-
+	
 	_delegate = anObject;
-
+	
 	// Register the new delegate for relavent notifications
 	if ([_delegate respondsToSelector:@selector(tableGridDidChangeSelection:)]) {
 		[[NSNotificationCenter defaultCenter] addObserver:_delegate selector:@selector(tableGridDidChangeSelection:) name:MBTableGridDidChangeSelectionNotification object:self];
@@ -1980,109 +2144,103 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	if ([_delegate respondsToSelector:@selector(tableGridDidResizeColumn:)]) {
 		[[NSNotificationCenter defaultCenter] addObserver:_delegate selector:@selector(tableGridDidResizeColumn:) name:MBTableGridDidResizeColumnNotification object:self];
 	}
-
+	
 }
 
 @end
 
 @implementation MBTableGrid (Drawing)
 
+- (BOOL) opaque {
+	return YES;
+}
+
 - (void)_drawColumnHeaderBackgroundInRect:(NSRect)aRect {
 	if ([self needsToDrawRect:aRect]) {
-		NSColor *topGradientTop = [NSColor colorWithDeviceWhite:1 alpha:1.0];
-		NSColor *topGradientBottom = [NSColor colorWithDeviceWhite:1 alpha:1.0];
-		NSColor *bottomGradientTop = [NSColor colorWithDeviceWhite:1 alpha:1.0];
-		NSColor *bottomGradientBottom = [NSColor colorWithDeviceWhite:1 alpha:1.0];
-		NSColor *topColor = [NSColor colorWithDeviceWhite:1 alpha:1.0];
-		NSColor *borderColor = [NSColor colorWithDeviceWhite:0.8 alpha:1.0];
-
-		NSGradient *topGradient = [[NSGradient alloc] initWithColors:@[topGradientTop, topGradientBottom]];
-		NSGradient *bottomGradient = [[NSGradient alloc] initWithColors:@[bottomGradientTop, bottomGradientBottom]];
-
-		NSRect topRect = NSMakeRect(NSMinX(aRect), 0, NSWidth(aRect), NSHeight(aRect) / 2);
-		NSRect bottomRect = NSMakeRect(NSMinX(aRect), NSMidY(aRect) - 0.5, NSWidth(aRect), NSHeight(aRect) / 2 + 0.5);
-
-		// Draw the gradients
-		[topGradient drawInRect:topRect angle:90.0];
-		[bottomGradient drawInRect:bottomRect angle:90.0];
-
-		// Draw the top bevel line
-		NSRect topLine = NSMakeRect(NSMinX(aRect), NSMinY(aRect), NSWidth(aRect), 1.0);
-		[topColor set];
-		NSRectFill(topLine);
-
+		
+		NSColor *borderColor = nil;
+		if (@available(macOS 10.13, *)) {
+			borderColor = [NSColor colorNamed:@"grid-line"];
+		} else {
+			borderColor = [NSColor gridColor];
+		}
+		
+		NSRect backgroundRect = NSMakeRect(NSMinX(aRect), NSMinY(aRect), NSWidth(aRect), MBTableGridColumnHeaderHeight);
+		
+		// Draw the background colour
+		[[NSColor windowBackgroundColor] set];
+		NSRectFill(backgroundRect);
+		
 		// Draw the bottom border
 		[borderColor set];
-		NSRect bottomLine = NSMakeRect(NSMinX(aRect), NSMaxY(aRect) - 1.0, NSWidth(aRect), 1.0);
+		NSRect bottomLine = NSMakeRect(NSMinX(aRect), NSMaxY(aRect), NSWidth(aRect), 1.0);
 		NSRectFill(bottomLine);
 	}
 }
 
 - (void)_drawColumnFooterBackgroundInRect:(NSRect)aRect {
 	if ([self needsToDrawRect:aRect]) {
-		NSColor *backgroundColor = [NSColor colorWithCalibratedWhite:0.91 alpha:1.0];
-		NSColor *topColor = [NSColor colorWithDeviceWhite:0.8 alpha:1.0];
-		NSColor *borderColor = [NSColor colorWithDeviceWhite:0.8 alpha:1.0];
+		NSColor *borderColor = nil;
+		if (@available(macOS 10.13, *)) {
+			borderColor = [NSColor colorNamed:@"grid-line"];
+		} else {
+			borderColor = [NSColor gridColor];
+		}
 		
-		NSRect backgroundRect = NSMakeRect(NSMinX(aRect), NSMaxY(aRect) - NSHeight(aRect), NSWidth(aRect), NSHeight(aRect));
+		NSRect backgroundRect = NSMakeRect(NSMinX(aRect), NSMinY(aRect), NSWidth(aRect), MBTableGridColumnHeaderHeight);
 		
 		// Draw the background colour
-		[backgroundColor set];
+		[[NSColor windowBackgroundColor] set];
 		NSRectFill(backgroundRect);
-		
-		// Draw the top bevel line
-		NSRect topLine = NSMakeRect(NSMinX(aRect), NSMinY(aRect), NSWidth(aRect), 1.0);
-		[topColor set];
-		NSRectFill(topLine);
 		
 		// Draw the bottom border
 		[borderColor set];
-		NSRect bottomLine = NSMakeRect(NSMinX(aRect), NSMaxY(aRect) - 1.0, NSWidth(aRect), 1.0);
+		NSRect bottomLine = NSMakeRect(NSMinX(aRect), NSMinY(aRect), NSWidth(aRect), 1.0);
 		NSRectFill(bottomLine);
+		
 	}
 }
 
 - (void)_drawRowHeaderBackgroundInRect:(NSRect)aRect {
 	if ([self needsToDrawRect:aRect]) {
-		NSColor *sideColor = [NSColor colorWithDeviceWhite:1.0 alpha:0.4];
-		NSColor *borderColor = [NSColor colorWithDeviceWhite:0.8 alpha:1.0];
-
-		// Draw the left bevel line
-		NSRect leftLine = NSMakeRect(NSMinX(aRect), NSMinY(aRect), 1.0, NSHeight(aRect));
-		[sideColor set];
-		[[NSBezierPath bezierPathWithRect:leftLine] fill];
-
+		
+		// draw the background
+		[[NSColor windowBackgroundColor] set];
+		NSRectFill(aRect);
+		
 		// Draw the right border
+		NSColor *borderColor = nil;
+		if (@available(macOS 10.13, *)) {
+			borderColor = [NSColor colorNamed:@"grid-line"];
+		} else {
+			borderColor = [NSColor gridColor];
+		}
+		
 		[borderColor set];
 		NSRect rightLine = NSMakeRect(NSMaxX(aRect) - 1, NSMinY(aRect), 1.0, NSHeight(aRect));
 		NSRectFill(rightLine);
 	}
 }
 
+
 - (void)_drawCornerHeaderBackgroundInRect:(NSRect)aRect {
 	if ([self needsToDrawRect:aRect]) {
-		NSColor *topColor = [NSColor colorWithDeviceWhite:0.9 alpha:1.0];
-		NSColor *sideColor = [NSColor colorWithDeviceWhite:0.8 alpha:0.4];
-		NSColor *borderColor = [NSColor colorWithDeviceWhite:0.8 alpha:1.0];
 
-		[[NSColor whiteColor] set];
+		NSColor *borderColor = nil;
+		if (@available(macOS 10.13, *)) {
+			borderColor = [NSColor colorNamed:@"grid-line"];
+		} else {
+			borderColor = [NSColor gridColor];
+		}
+		
+		[[NSColor windowBackgroundColor] set];
 		NSRectFill(aRect);
 		
-		// Draw the top bevel line
-		NSRect topLine = NSMakeRect(NSMinX(aRect), NSMinY(aRect), NSWidth(aRect), 1.0);
-		[topColor set];
-		NSRectFill(topLine);
-
-		// Draw the left bevel line
-		NSRect leftLine = NSMakeRect(NSMinX(aRect), NSMinY(aRect), 1.0, NSHeight(aRect));
-		[sideColor set];
-		[[NSBezierPath bezierPathWithRect:leftLine] fill];
-
 		// Draw the right border
 		[borderColor set];
 		NSRect borderLine = NSMakeRect(NSMaxX(aRect) - 1, NSMinY(aRect), 1.0, NSHeight(aRect));
 		NSRectFill(borderLine);
-
+		
 		// Draw the bottom border
 		NSRect bottomLine = NSMakeRect(NSMinX(aRect), NSMaxY(aRect) - 1.0, NSWidth(aRect), 1.0);
 		NSRectFill(bottomLine);
@@ -2096,33 +2254,36 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		
 		if (!_footerHidden) {
 			
-			NSColor *topColor = [NSColor colorWithDeviceWhite:0.8 alpha:1.000];
-			NSColor *sideColor = [NSColor colorWithDeviceWhite:1.0 alpha:0.4];
-			NSColor *borderColor = [NSColor colorWithDeviceWhite:0.8 alpha:1.000];
-			NSColor *backgroundColor = [NSColor colorWithDeviceWhite:0.93 alpha:1.0];
+			NSColor *borderColor = nil;
+			if (@available(macOS 10.13, *)) {
+				borderColor = [NSColor colorNamed:@"grid-line"];
+			} else {
+				borderColor = [NSColor gridColor];
+			}
+
+			NSColor *backgroundColor = [NSColor windowBackgroundColor];
 			
 			[backgroundColor set];
 			NSRectFill(aRect);
 			
 			// Draw the top bevel line
 			NSRect topLine = NSMakeRect(NSMinX(aRect), NSMinY(aRect), NSWidth(aRect), 1.0);
-			[topColor set];
+			[borderColor set];
 			NSRectFill(topLine);
 			
 			// Draw the left bevel line
-			NSRect leftLine = NSMakeRect(NSMinX(aRect), NSMinY(aRect), 1.0, NSHeight(aRect));
-			[sideColor set];
-			[[NSBezierPath bezierPathWithRect:leftLine] fill];
+			//			NSRect leftLine = NSMakeRect(NSMinX(aRect), NSMinY(aRect), 1.0, NSHeight(aRect));
+			//			[sideColor set];
+			//			[[NSBezierPath bezierPathWithRect:leftLine] fill];
 			
 			// Draw the right border
-			[borderColor set];
 			NSRect borderLine = NSMakeRect(NSMaxX(aRect) - 1, NSMinY(aRect), 1.0, NSHeight(aRect));
 			NSRectFill(borderLine);
 		}
 		
 		// Draw the bottom border
-		NSRect bottomLine = NSMakeRect(NSMinX(aRect), NSMaxY(aRect) - 1.0, NSWidth(aRect), 1.0);
-		NSRectFill(bottomLine);
+		//		NSRect bottomLine = NSMakeRect(NSMinX(aRect), NSMaxY(aRect) - 1.0, NSWidth(aRect), 1.0);
+		//		NSRectFill(bottomLine);
 	}
 }
 
@@ -2135,7 +2296,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	if ([[self dataSource] respondsToSelector:@selector(tableGrid:headerStringForColumn:)]) {
 		return [[self dataSource] tableGrid:self headerStringForColumn:columnIndex];
 	}
-
+	
 	char alphabetChar = columnIndex + 'A';
 	return [NSString stringWithFormat:@"%c", alphabetChar];
 }
@@ -2145,8 +2306,8 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	if ([[self dataSource] respondsToSelector:@selector(tableGrid:headerStringForRow:)]) {
 		return [[self dataSource] tableGrid:self headerStringForRow:rowIndex];
 	}
-
-	return [NSString stringWithFormat:@"%lu", (rowIndex + 1)];
+	
+	return [NSString localizedStringWithFormat:@"%lu", (rowIndex + 1)];
 }
 
 - (id)_objectValueForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
@@ -2168,9 +2329,9 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (NSFormatter *)_formatterForColumn:(NSUInteger)columnIndex {
-    if ([[self dataSource] respondsToSelector:@selector(tableGrid:formatterForColumn:)]) {
-        return [[self dataSource] tableGrid:self formatterForColumn:columnIndex];
-    }
+	if ([[self dataSource] respondsToSelector:@selector(tableGrid:formatterForColumn:)]) {
+		return [[self dataSource] tableGrid:self formatterForColumn:columnIndex];
+	}
 	return nil;
 }
 
@@ -2191,10 +2352,10 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (NSArray *)_autocompleteValuesForEditString:(NSString *)editString column:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
-    if ([[self dataSource] respondsToSelector:@selector(tableGrid:autocompleteValuesForEditString:column:row:)]) {
-        return [[self dataSource] tableGrid:self autocompleteValuesForEditString:editString column:columnIndex row:rowIndex];
-    }
-    return nil;
+	if ([[self dataSource] respondsToSelector:@selector(tableGrid:autocompleteValuesForEditString:column:row:)]) {
+		return [[self dataSource] tableGrid:self autocompleteValuesForEditString:editString column:columnIndex row:rowIndex];
+	}
+	return nil;
 }
 
 - (id)_backgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
@@ -2212,10 +2373,10 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (id)_groupSummaryBackgroundColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
-    if ([[self dataSource] respondsToSelector:@selector(tableGrid:groupSummaryBackgroundColorForColumn:row:)]) {
-        return [[self dataSource] tableGrid:self groupSummaryBackgroundColorForColumn:columnIndex row:rowIndex];
-    }
-    return nil;
+	if ([[self dataSource] respondsToSelector:@selector(tableGrid:groupSummaryBackgroundColorForColumn:row:)]) {
+		return [[self dataSource] tableGrid:self groupSummaryBackgroundColorForColumn:columnIndex row:rowIndex];
+	}
+	return nil;
 }
 
 - (id)_textColorForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
@@ -2227,13 +2388,13 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 - (void)_setObjectValue:(id)value forColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex undoTitle:(NSString *)undoTitle {
 	if ([[self dataSource] respondsToSelector:@selector(tableGrid:setObjectValue:forColumn:row:)]) {
-        
-        NSUndoManager *undoManager = [self _undoManager];
-        id oldValue = [self _objectValueForColumn:columnIndex row:rowIndex];
-        
-        [[undoManager prepareWithInvocationTarget:self] _setObjectValue:oldValue forColumn:columnIndex row:rowIndex undoTitle:undoTitle];
-        undoManager.actionName = undoTitle;
-        
+		
+		NSUndoManager *undoManager = [self _undoManager];
+		id oldValue = [self _objectValueForColumn:columnIndex row:rowIndex];
+		
+		[[undoManager prepareWithInvocationTarget:self] _setObjectValue:oldValue forColumn:columnIndex row:rowIndex undoTitle:undoTitle];
+		undoManager.actionName = undoTitle;
+		
 		[[self dataSource] tableGrid:self setObjectValue:value forColumn:columnIndex row:rowIndex];
 	}
 }
@@ -2243,14 +2404,14 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	if ([columnIndexNames count] > columnIndex) {
 		column = columnIndexNames[columnIndex];
 	}
-
+	
 	if (!column) {
 		column = [NSString stringWithFormat:@"column%lu", columnIndex];
 		if (columnIndex != NSNotFound && columnIndex < columnIndexNames.count) {
 			columnIndexNames[columnIndex] = column;
 		}
 	}
-
+	
 	if (columnWidths[column]) {
 		return [columnWidths[column] floatValue];
 	}
@@ -2271,7 +2432,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 		} else {
 			width = 100;
 		}
-
+		
 		return width;
 	}
 	else {
@@ -2284,12 +2445,12 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	if (![[self dataSource] respondsToSelector:@selector(tableGrid:setObjectValue:forColumn:row:)]) {
 		return NO;
 	}
-
+	
 	// Ask the delegate if the cell is editable
 	if ([[self delegate] respondsToSelector:@selector(tableGrid:shouldEditColumn:row:)]) {
 		return [[self delegate] tableGrid:self shouldEditColumn:columnIndex row:rowIndex];
 	}
-
+	
 	return YES;
 }
 
@@ -2308,57 +2469,57 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (void)_fillInColumn:(NSUInteger)column fromRow:(NSUInteger)row numberOfRowsWhenStarting:(NSUInteger)numberOfRowsWhenStartingFilling {
-    
-    NSInteger numberOfRows = self.numberOfRows;
-    BOOL addedRows = numberOfRows > numberOfRowsWhenStartingFilling;
-    NSIndexSet *addedRowIndexes = nil;
-    
-    if (addedRows) {
-        addedRowIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(numberOfRowsWhenStartingFilling, numberOfRows - numberOfRowsWhenStartingFilling)];
-    }
-    
-    [[[self _undoManager] prepareWithInvocationTarget:self] _undoFillInColumn:column filledRows:self.selectedRowIndexes addedRows:addedRowIndexes];
-    
-    id value = [self _objectValueForColumn:column row:row];
-    
-    [self.selectedRowIndexes enumerateIndexesUsingBlock:^(NSUInteger idx, BOOL *stop) {
-        [self _setObjectValue:[value copy] forColumn:column row:idx undoTitle:NSLocalizedString(@"Fill", nil)];
-    }];
-    
-    // If rows were added, tell the delegate
-    if (addedRows && [self.delegate respondsToSelector:@selector(tableGrid:didAddRows:)]) {
-        [self.delegate tableGrid:self didAddRows:addedRowIndexes];
-    }
+	
+	NSInteger numberOfRows = self.numberOfRows;
+	BOOL addedRows = numberOfRows > numberOfRowsWhenStartingFilling;
+	NSMutableIndexSet *addedRowIndexes = nil;
+	
+	if (addedRows) {
+		addedRowIndexes = [NSMutableIndexSet indexSetWithIndexesInRange:NSMakeRange(numberOfRowsWhenStartingFilling, numberOfRows - numberOfRowsWhenStartingFilling)];
+	}
+	
+	[[[self _undoManager] prepareWithInvocationTarget:self] _undoFillInColumn:column filledRows:self.selectedRowIndexes addedRows:addedRowIndexes];
+	
+	id value = [self _objectValueForColumn:column row:row];
+	
+	[self.selectedRowIndexes enumerateIndexesUsingBlock:^(NSUInteger idx, BOOL *stop) {
+		[self _setObjectValue:[value copy] forColumn:column row:idx undoTitle:NSLocalizedString(@"Fill", nil)];
+	}];
+	
+	// If rows were added, tell the delegate
+	if (addedRows && [self.delegate respondsToSelector:@selector(tableGrid:didAddRows:)]) {
+		[self.delegate tableGrid:self didAddRows:addedRowIndexes];
+	}
 }
 
 - (void)_undoFillInColumn:(NSUInteger)column filledRows:(NSMutableIndexSet *)filledRowIndexes addedRows:(NSIndexSet *)addedRowIndexes {
-    
-    [[[self _undoManager] prepareWithInvocationTarget:self] _redoFillInColumn:column filledRows:filledRowIndexes addedRows:addedRowIndexes];
-    
-    if (addedRowIndexes && [self.dataSource respondsToSelector:@selector(tableGrid:removeRows:)]) {
-        [self.dataSource tableGrid:self removeRows:addedRowIndexes];
-    }
-    
-    self.selectedColumnIndexes = [NSIndexSet indexSetWithIndex:column];
-    self.selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:filledRowIndexes.firstIndex];
+	
+	[[[self _undoManager] prepareWithInvocationTarget:self] _redoFillInColumn:column filledRows:filledRowIndexes addedRows:addedRowIndexes];
+	
+	if (addedRowIndexes && [self.dataSource respondsToSelector:@selector(tableGrid:removeRows:)]) {
+		[self.dataSource tableGrid:self removeRows:addedRowIndexes];
+	}
+	
+	self.selectedColumnIndexes = [NSIndexSet indexSetWithIndex:column];
+	self.selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:filledRowIndexes.firstIndex];
 }
 
 - (void)_redoFillInColumn:(NSUInteger)column filledRows:(NSMutableIndexSet *)filledRowIndexes addedRows:(NSIndexSet *)addedRowIndexes {
-    
-    [[[self _undoManager] prepareWithInvocationTarget:self] _undoFillInColumn:column filledRows:filledRowIndexes addedRows:addedRowIndexes];
-    
-    if (addedRowIndexes && [self.dataSource respondsToSelector:@selector(tableGrid:addRows:)]) {
-        [self.dataSource tableGrid:self addRows:addedRowIndexes.count];
-    }
-    
-    self.selectedColumnIndexes = [NSIndexSet indexSetWithIndex:column];
-    self.selectedRowIndexes = filledRowIndexes;
+	
+	[[[self _undoManager] prepareWithInvocationTarget:self] _undoFillInColumn:column filledRows:filledRowIndexes addedRows:addedRowIndexes];
+	
+	if (addedRowIndexes && [self.dataSource respondsToSelector:@selector(tableGrid:addRows:)]) {
+		[self.dataSource tableGrid:self addRows:addedRowIndexes.count];
+	}
+	
+	self.selectedColumnIndexes = [NSIndexSet indexSetWithIndex:column];
+	self.selectedRowIndexes = filledRowIndexes;
 }
 
 - (void)_userDidEnterInvalidStringInColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex errorDescription:(NSString *)errorDescription {
-    if ([[self delegate] respondsToSelector:@selector(tableGrid:userDidEnterInvalidStringInColumn:row:errorDescription:)]) {
-        [[self delegate] tableGrid:self userDidEnterInvalidStringInColumn:columnIndex row:rowIndex errorDescription:errorDescription];
-    }
+	if ([[self delegate] respondsToSelector:@selector(tableGrid:userDidEnterInvalidStringInColumn:row:errorDescription:)]) {
+		[[self delegate] tableGrid:self userDidEnterInvalidStringInColumn:columnIndex row:rowIndex errorDescription:errorDescription];
+	}
 }
 
 - (void)_accessoryButtonClicked:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
@@ -2377,38 +2538,38 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (BOOL)_isGroupSummaryRow:(NSUInteger)rowIndex {
-    if (!self.includeGroupSummaryRows) {
-        return NO;
-    } else if (rowIndex == [[self dataSource] numberOfRowsInTableGrid:self] - 1) {
-        return YES;
-    } else {
-        return rowIndex > 0 && [self _isGroupHeadingRow:rowIndex + 1];
-    }
+	if (!self.includeGroupSummaryRows) {
+		return NO;
+	} else if (rowIndex == [[self dataSource] numberOfRowsInTableGrid:self] - 1) {
+		return YES;
+	} else {
+		return rowIndex > 0 && [self _isGroupHeadingRow:rowIndex + 1];
+	}
 }
 
 - (BOOL)_isGroupRow:(NSUInteger)rowIndex {
-    return [self _isGroupHeadingRow:rowIndex] || [self _isGroupSummaryRow:rowIndex];
+	return [self _isGroupHeadingRow:rowIndex] || [self _isGroupSummaryRow:rowIndex];
 }
 
 - (NSCell *)_groupSummaryCellForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
-    if ([[self dataSource] respondsToSelector:@selector(tableGrid:groupSummaryCellForColumn:row:)]) {
-        return [[self dataSource] tableGrid:self groupSummaryCellForColumn:columnIndex row:rowIndex];
-    }
-    return nil;
+	if ([[self dataSource] respondsToSelector:@selector(tableGrid:groupSummaryCellForColumn:row:)]) {
+		return [[self dataSource] tableGrid:self groupSummaryCellForColumn:columnIndex row:rowIndex];
+	}
+	return nil;
 }
 
 - (void)_updateGroupSummaryCell:(NSCell *)cell forColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
-    if ([[self dataSource] respondsToSelector:@selector(tableGrid:updateGroupSummaryCell:forColumn:row:)]) {
-        [[self dataSource] tableGrid:self updateGroupSummaryCell:cell forColumn:columnIndex row:rowIndex];
-    }
+	if ([[self dataSource] respondsToSelector:@selector(tableGrid:updateGroupSummaryCell:forColumn:row:)]) {
+		[[self dataSource] tableGrid:self updateGroupSummaryCell:cell forColumn:columnIndex row:rowIndex];
+	}
 }
 
 - (id)_groupSummaryValueForColumn:(NSUInteger)columnIndex row:(NSUInteger)rowIndex {
-    if ([[self dataSource] respondsToSelector:@selector(tableGrid:groupSummaryValueForColumn:row:)]) {
-        id value = [[self dataSource] tableGrid:self groupSummaryValueForColumn:columnIndex row:rowIndex];
-        return value;
-    }
-    return nil;
+	if ([[self dataSource] respondsToSelector:@selector(tableGrid:groupSummaryValueForColumn:row:)]) {
+		id value = [[self dataSource] tableGrid:self groupSummaryValueForColumn:columnIndex row:rowIndex];
+		return value;
+	}
+	return nil;
 }
 
 - (NSColor *)_tagColorForRow:(NSUInteger)rowIndex {
@@ -2419,7 +2580,7 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	}
 	
 	return returnColor;
-
+	
 }
 
 - (MBSortDirection)_sortDirectionForColumn:(NSUInteger)columnIndex {
@@ -2435,24 +2596,24 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 #pragma mark Footer
 
 - (NSCell *)_footerCellForColumn:(NSUInteger)columnIndex {
-    if ([[self dataSource] respondsToSelector:@selector(tableGrid:footerCellForColumn:)]) {
-        return [[self dataSource] tableGrid:self footerCellForColumn:columnIndex];
-    }
-    return nil;
+	if ([[self dataSource] respondsToSelector:@selector(tableGrid:footerCellForColumn:)]) {
+		return [[self dataSource] tableGrid:self footerCellForColumn:columnIndex];
+	}
+	return nil;
 }
 
 - (id)_footerValueForColumn:(NSUInteger)columnIndex {
-    if ([[self dataSource] respondsToSelector:@selector(tableGrid:footerValueForColumn:)]) {
-        id value = [[self dataSource] tableGrid:self footerValueForColumn:columnIndex];
-        return value;
-    }
-    return nil;
+	if ([[self dataSource] respondsToSelector:@selector(tableGrid:footerValueForColumn:)]) {
+		id value = [[self dataSource] tableGrid:self footerValueForColumn:columnIndex];
+		return value;
+	}
+	return nil;
 }
 
 - (void)_setFooterValue:(id)value forColumn:(NSUInteger)columnIndex {
-    if ([[self dataSource] respondsToSelector:@selector(tableGrid:setFooterValue:forColumn:)]) {
-        [[self dataSource] tableGrid:self setFooterValue:value forColumn:columnIndex];
-    }
+	if ([[self dataSource] respondsToSelector:@selector(tableGrid:setFooterValue:forColumn:)]) {
+		[[self dataSource] tableGrid:self setFooterValue:value forColumn:columnIndex];
+	}
 }
 
 @end
@@ -2477,15 +2638,15 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 }
 
 - (NSUndoManager *)_undoManager {
-    if (!self.cachedUndoManager && [[self delegate] respondsToSelector:@selector(undoManagerForTableGrid:)]) {
-        self.cachedUndoManager = [[self delegate] undoManagerForTableGrid:self];
-    }
-    
-    if (!self.cachedUndoManager) {
-        self.cachedUndoManager = self.window.undoManager;
-    }
-    
-    return self.cachedUndoManager;
+	if (!self.cachedUndoManager && [[self delegate] respondsToSelector:@selector(undoManagerForTableGrid:)]) {
+		self.cachedUndoManager = [[self delegate] undoManagerForTableGrid:self];
+	}
+	
+	if (!self.cachedUndoManager) {
+		self.cachedUndoManager = self.window.undoManager;
+	}
+	
+	return self.cachedUndoManager;
 }
 
 @end
@@ -2494,36 +2655,36 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 
 - (void)_dragColumnsWithEvent:(NSEvent *)theEvent {
 	NSImage *dragImage = [self _imageForSelectedColumns];
-
+	
 	NSRect firstSelectedColumn = [self rectOfColumn:[self.selectedColumnIndexes firstIndex]];
 	NSPoint location = firstSelectedColumn.origin;
-    
-    NSData *data = [NSKeyedArchiver archivedDataWithRootObject:self.selectedColumnIndexes];
-    NSPasteboardItem *pbItem = [[NSPasteboardItem alloc] initWithPasteboardPropertyList:data ofType:MBTableGridColumnDataType];
-    NSDraggingItem *item = [[NSDraggingItem alloc] initWithPasteboardWriter:pbItem];
-    
-    NSRect dragImageFrame = NSMakeRect(location.x, location.y, dragImage.size.width, dragImage.size.height);
-    [item setDraggingFrame:dragImageFrame contents:dragImage];
-    id source = (id <NSDraggingSource>) self;
-    
-    [self beginDraggingSessionWithItems:@[item] event:theEvent source:source];
+	
+	NSData *data = [NSKeyedArchiver archivedDataWithRootObject:self.selectedColumnIndexes];
+	NSPasteboardItem *pbItem = [[NSPasteboardItem alloc] initWithPasteboardPropertyList:data ofType:MBTableGridColumnDataType];
+	NSDraggingItem *item = [[NSDraggingItem alloc] initWithPasteboardWriter:pbItem];
+	
+	NSRect dragImageFrame = NSMakeRect(location.x, location.y, dragImage.size.width, dragImage.size.height);
+	[item setDraggingFrame:dragImageFrame contents:dragImage];
+	id source = (id <NSDraggingSource>) self;
+	
+	[self beginDraggingSessionWithItems:@[item] event:theEvent source:source];
 }
 
 - (void)_dragRowsWithEvent:(NSEvent *)theEvent {
 	NSImage *dragImage = [self _imageForSelectedRows];
-    
+	
 	NSRect firstSelectedRowRect = [self rectOfRow:[self.selectedRowIndexes firstIndex]];
 	NSPoint location = firstSelectedRowRect.origin;
-    
-    NSData *data = [NSKeyedArchiver archivedDataWithRootObject:self.selectedRowIndexes];
-    NSPasteboardItem *pbItem = [[NSPasteboardItem alloc] initWithPasteboardPropertyList:data ofType:MBTableGridRowDataType];
-    NSDraggingItem *item = [[NSDraggingItem alloc] initWithPasteboardWriter:pbItem];
-    
-    NSRect dragImageFrame = NSMakeRect(location.x, location.y, dragImage.size.width, dragImage.size.height);
-    [item setDraggingFrame:dragImageFrame contents:dragImage];
-    id source = (id <NSDraggingSource>) self;
-    
-    [self beginDraggingSessionWithItems:@[item] event:theEvent source:source];
+	
+	NSData *data = [NSKeyedArchiver archivedDataWithRootObject:self.selectedRowIndexes];
+	NSPasteboardItem *pbItem = [[NSPasteboardItem alloc] initWithPasteboardPropertyList:data ofType:MBTableGridRowDataType];
+	NSDraggingItem *item = [[NSDraggingItem alloc] initWithPasteboardWriter:pbItem];
+	
+	NSRect dragImageFrame = NSMakeRect(location.x, location.y, dragImage.size.width, dragImage.size.height);
+	[item setDraggingFrame:dragImageFrame contents:dragImage];
+	id source = (id <NSDraggingSource>) self;
+	
+	[self beginDraggingSessionWithItems:@[item] event:theEvent source:source];
 }
 
 - (NSImage *)_imageForSelectedColumns {
@@ -2533,20 +2694,20 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	// Extend the frame to show the left border
 	columnsFrame.origin.x -= 1.0;
 	columnsFrame.size.width += 1.0;
-
+	
 	// Take a snapshot of the view
 	NSImage *opaqueImage = [[NSImage alloc] initWithData:[self dataWithPDFInsideRect:columnsFrame]];
-
+	
 	// Create the translucent drag image
 	NSImage *finalImage = [[NSImage alloc] initWithSize:[opaqueImage size]];
 	[finalImage lockFocus];
 #if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_8
 	[opaqueImage compositeToPoint:NSZeroPoint operation:NSCompositeCopy fraction:0.7];
 #else
-	[opaqueImage drawAtPoint:NSZeroPoint fromRect:NSZeroRect operation:NSCompositeCopy fraction:0.7];
+	[opaqueImage drawAtPoint:NSZeroPoint fromRect:NSZeroRect operation:NSCompositingOperationCopy fraction:0.7];
 #endif
 	[finalImage unlockFocus];
-
+	
 	return finalImage;
 }
 
@@ -2557,56 +2718,61 @@ NSString *MBTableGridRowDataType = @"mbtablegrid.pasteboard.row";
 	// Extend the frame to show the top border
 	rowsFrame.origin.y -= 1.0;
 	rowsFrame.size.height += 1.0;
-
+	
 	// Take a snapshot of the view
 	NSImage *opaqueImage = [[NSImage alloc] initWithData:[self dataWithPDFInsideRect:rowsFrame]];
-
+	
 	// Create the translucent drag image
 	NSImage *finalImage = [[NSImage alloc] initWithSize:[opaqueImage size]];
 	[finalImage lockFocus];
 #if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_8
 	[opaqueImage compositeToPoint:NSZeroPoint operation:NSCompositeCopy fraction:0.7];
 #else
-	[opaqueImage drawAtPoint:NSZeroPoint fromRect:NSZeroRect operation:NSCompositeCopy fraction:0.7];
+	[opaqueImage drawAtPoint:NSZeroPoint fromRect:NSZeroRect operation:NSCompositingOperationCopy fraction:0.7];
 #endif
 	[finalImage unlockFocus];
-
+	
 	return finalImage;
 }
 
 - (NSUInteger)_dropColumnForPoint:(NSPoint)aPoint {
 	NSUInteger column = [self columnAtPoint:aPoint];
-
+	
 	if (column == NSNotFound) {
 		return NSNotFound;
 	}
-
+	
 	// If we're in the right half of the column, we intent to drop on the right side
 	NSRect columnFrame = [self rectOfColumn:column];
 	columnFrame.size.width /= 2;
 	if (!NSPointInRect(aPoint, columnFrame)) {
 		column++;
 	}
-
+	
 	return column;
 }
 
 - (NSUInteger)_dropRowForPoint:(NSPoint)aPoint {
 	NSUInteger row = [self rowAtPoint:aPoint];
-
+	
 	if (row == NSNotFound) {
 		return NSNotFound;
 	}
-
+	
 	// If we're in the bottom half of the row, we intent to drop on the bottom side
 	NSRect rowFrame = [self rectOfRow:row];
 	rowFrame.size.height /= 2;
-
+	
 	if (!NSPointInRect(aPoint, rowFrame)) {
 		row++;
 	}
-
+	
 	return row;
+}
+
+- (void)setEnabled:(BOOL)enabled {
+	
+	[self reloadData];
 }
 
 @end

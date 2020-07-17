@@ -8,6 +8,10 @@
 
 #import "MBButtonCell.h"
 
+@interface MBButtonCell()
+@property (nonatomic, strong) NSColor *borderColor;
+@end
+
 @implementation MBButtonCell
 
 #pragma mark - Lifecycle
@@ -18,7 +22,11 @@
 		self.title = nil;
 		[self setBordered:NO];
 		[self setBezeled:NO];
-		[self setBackgroundColor:[NSColor clearColor]];
+		if (@available(macOS 10.13, *)) {
+			self.borderColor = [NSColor colorNamed:@"grid-line"];
+		} else {
+			self.borderColor = [NSColor gridColor];
+		}
 	}
 	return self;
 }
@@ -46,12 +54,11 @@
 	NSRect popupFrame = [self centeredButtonRectInCellFrame:cellFrame];
 	[super drawWithFrame:popupFrame inView:controlView];
 	
-	NSColor *borderColor = [NSColor colorWithDeviceWhite:0.83 alpha:1.0];
-	[borderColor set];
-	
-	// Draw the right border
+	[self.borderColor set];
+
 	NSRect rightLine = NSMakeRect(NSMaxX(cellFrame)-1.0, NSMinY(cellFrame), 1.0, NSHeight(cellFrame));
 	NSRectFill(rightLine);
+	
 	
 	// Draw the bottom border
 	NSRect bottomLine = NSMakeRect(NSMinX(cellFrame), NSMaxY(cellFrame)-1.0, NSWidth(cellFrame), 1.0);

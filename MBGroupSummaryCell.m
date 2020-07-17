@@ -9,19 +9,33 @@
 
 @implementation MBGroupSummaryCell
 
+- (NSAttributedString *)attributedTitle
+{
+	NSMutableParagraphStyle *paragraphStyle = [[NSMutableParagraphStyle alloc] init];
+	paragraphStyle.alignment = self.alignment;
+	
+	NSDictionary *attributes = @{NSFontAttributeName : self.font, NSForegroundColorAttributeName : self.textColor,
+								 NSParagraphStyleAttributeName : paragraphStyle};
+	
+	return [[NSAttributedString alloc] initWithString:self.title attributes:attributes];
+}
+
 - (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView
 {
-    NSColor *borderColor = [NSColor colorWithDeviceWhite:0.83 alpha:1.0];
-    [borderColor set];
+
+	[self.borderColor set];
     
-    // Draw the top border
-    NSRect topLine = NSMakeRect(NSMinX(cellFrame), NSMinY(cellFrame), NSWidth(cellFrame), 1.0);
-    NSRectFill(topLine);
-    
+    // Draw the right border
+	if (self.isLastColumn) {
+		NSRect rightLine = NSMakeRect(NSMaxX(cellFrame) - 1, NSMinY(cellFrame), 1.0, NSHeight(cellFrame));
+		NSRectFill(rightLine);
+	}
+	
     // Draw the bottom border
     NSRect bottomLine = NSMakeRect(NSMinX(cellFrame), NSMaxY(cellFrame) - 1.0, NSWidth(cellFrame), 1.0);
     NSRectFill(bottomLine);
-    
+	
+	cellFrame.size.width -= 6;
     [self drawInteriorWithFrame:cellFrame inView:controlView];
 }
 

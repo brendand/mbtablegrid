@@ -43,6 +43,9 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 - (BOOL)_isGroupRow:(NSUInteger)rowIndex;
 - (NSColor *)_tagColorForRow:(NSUInteger)rowIndex;
 - (MBSortDirection)_sortDirectionForColumn:(NSUInteger)columnIndex;
+- (void)_setStickyColumn:(MBTableGridEdge)stickyColumn row:(MBTableGridEdge)stickyRow;
+- (MBTableGridEdge)_stickyColumn;
+- (MBTableGridEdge)_stickyRow;
 @end
 
 @interface MBTableGridHeaderView()
@@ -53,12 +56,18 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 
 @implementation MBTableGridHeaderView
 
-@synthesize orientation;
+@synthesize orientation = _orientation;
 @synthesize headerCell;
+@synthesize defaultCellFont = _defaultCellFont;
 
 - (id)initWithFrame:(NSRect)frameRect
 {
 	if(self = [super initWithFrame:frameRect]) {
+		
+//		self.wantsLayer = YES;
+//		self.layer.drawsAsynchronously = YES;
+//		self.layerContentsRedrawPolicy = NSViewLayerContentsRedrawOnSetNeedsDisplay;
+		
 		// Setup the header cell
 		headerCell = [[MBTableGridHeaderCell alloc] init];
 		
@@ -76,10 +85,42 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 	return self;
 }
 
+- (void)setDefaultCellFont:(NSFont *)defaultCellFont {
+	_defaultCellFont = defaultCellFont;
+	
+	NSFontManager *fontManager = [NSFontManager sharedFontManager];
+	NSFontTraitMask traits = NSBoldFontMask;
+	
+	NSFont *newFont = [fontManager convertFont:defaultCellFont
+								   toHaveTrait:traits];
+	
+	newFont = [NSFont fontWithDescriptor:newFont.fontDescriptor size:defaultCellFont.pointSize];
+	
+	headerCell.defaultCellFont = newFont;
+	[self setNeedsDisplay:YES];
+}
+
+
+- (void)setOrientation:(MBTableGridHeaderOrientation)orientation {
+	_orientation = orientation;
+}
+
 - (void)drawRect:(NSRect)rect
 {
+	
+	NSColor *borderColor = nil;
+	if (@available(macOS 10.13, *)) {
+		borderColor = [NSColor colorNamed:@"grid-line"];
+	} else {
+		borderColor = [NSColor gridColor];
+	}
+	
 	if (self.orientation == MBTableHeaderHorizontalOrientation) {
-        
+		
+		[borderColor set];
+		NSRect bottomLine = NSMakeRect(NSMinX(rect), NSMaxY(rect) - 1, NSWidth(rect), 1);
+		NSRectFill(bottomLine);
+		
 		// Draw the column headers
 		NSUInteger numberOfColumns = [self tableGrid].numberOfColumns;
 		[headerCell setOrientation:self.orientation];
@@ -120,10 +161,7 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
                 
                 BOOL isFrozenColumn = self != [self tableGrid].frozenColumnHeaderView && [[self tableGrid] isFrozenColumn:column];
                 
-                if (isFrozenColumn) {
-                    [[NSColor whiteColor] set];
-                    NSRectFill(headerRect);
-                } else {
+                if (!isFrozenColumn) {
                     [headerCell drawWithFrame:headerRect inView:self];
                 }
                 
@@ -137,12 +175,21 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 		// Draw the row headers
 		NSUInteger numberOfRows = [self tableGrid].numberOfRows;
 		[headerCell setOrientation:self.orientation];
+		
 		NSUInteger row = 0;
 		NSUInteger rowNumber = 0;
+		[[[self tableGrid] contentView] cacheGroupRows];
+		
 		while(row < numberOfRows) {
+			
+
 			NSRect headerRect = [self headerRectOfRow:row];
-            BOOL isGroupRow = [[[[self tableGrid] contentView] groupHeadingRowIndexes] objectForKey:@(row)] != nil || [[[[self tableGrid] contentView] groupSummaryRowIndexes] objectForKey:@(row)] != nil;
-            
+			BOOL isGroupSummaryRow = [[[[self tableGrid] contentView] groupSummaryRowIndexes] objectForKey:@(row)] != nil;
+			BOOL isGroupRow = [[[[self tableGrid] contentView] groupHeadingRowIndexes] objectForKey:@(row)] != nil;
+			
+			headerCell.isGroupRow = isGroupRow;
+			headerCell.isGroupSummaryRow = isGroupSummaryRow;
+
 			// Only draw the header if we need to
 			if ([self needsToDrawRect:headerRect]) {
                 
@@ -154,7 +201,7 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 					[headerCell setState:NSOffState];
 				}
 				
-				if (!isGroupRow) {
+				if (!isGroupRow && !isGroupSummaryRow) {
 					NSString *headerValue = [[self tableGrid] _headerStringForRow:rowNumber];
 					[headerCell setStringValue:headerValue];
 				} else {
@@ -167,11 +214,16 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 				[headerCell drawWithFrame:headerRect inView:self];
 			}
 			
-			if (!isGroupRow) {
+			if (!isGroupRow && !isGroupSummaryRow) {
 				rowNumber++;
 			}
 			row++;
 		}
+		
+
+		[borderColor set];
+		NSRect rightLine = NSMakeRect(NSMaxX(rect) - 1, NSMinY(rect), 1.0, NSHeight(rect));
+		NSRectFill(rightLine);
 	}
 }
 
@@ -180,122 +232,261 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 	return YES;
 }
 
-- (void)updateTrackingAreas
-{
-    [super updateTrackingAreas];
-    
-    if (self.orientation == MBTableHeaderHorizontalOrientation) {
-        // Remove all tracking areas
-        if (trackingAreas) {
-            for (NSTrackingArea *trackingArea in trackingAreas) {
-                [self removeTrackingArea:trackingArea];
-            }
-        }
-        
-        // reset tracking array
-        trackingAreas = [NSMutableArray array];
-        
-        NSUInteger numberOfColumns = [self tableGrid].numberOfColumns;
-        NSUInteger column = 0;
-        
-        while (column < numberOfColumns) {
-            NSRect headerRect = [self headerRectOfColumn:column];
-            
-            // Create new tracking area for resizing columns
-            NSRect resizeRect = NSMakeRect(NSMinX(headerRect) + NSWidth(headerRect) - 2, NSMinY(headerRect), 5, NSHeight(headerRect));
-            NSTrackingArea *resizeTrackingArea = [[NSTrackingArea alloc] initWithRect:resizeRect options:(NSTrackingMouseEnteredAndExited | NSTrackingActiveAlways) owner:self userInfo:nil];
-            
-            // keep track of tracking areas and add tracking to view
-            [trackingAreas addObject:resizeTrackingArea];
-            [self addTrackingArea:resizeTrackingArea];
-            
-            column++;
-        }
-    }
-}
-
-- (void)mouseDown:(NSEvent *)theEvent
-{
-    
-	// Get the location of the click
-	NSPoint loc = [self convertPoint:[theEvent locationInWindow] fromView:nil];
-	mouseDownLocation = loc;
-	NSInteger column = [[self tableGrid] columnAtPoint:[self convertPoint:loc toView:[self tableGrid]]];
-	NSInteger row = [[self tableGrid] rowAtPoint:[self convertPoint:loc toView:[self tableGrid]]];
-	
-	if (self.orientation == MBTableHeaderVerticalOrientation && [[self tableGrid] _isGroupRow:row]) {
-		return;
+- (void) updateTrackingAreas {
+	// Remove all tracking areas
+	for (NSTrackingArea *trackingArea in self.trackingAreas) {
+		[self removeTrackingArea:trackingArea];
 	}
 	
-    if (canResize) {
-        
-        // Set resize column index
-        draggingColumnIndex = [[self tableGrid] columnAtPoint:[self convertPoint:NSMakePoint(loc.x - 3, loc.y) toView:[self tableGrid]]];
-        lastMouseDraggingLocation = loc;
-        isResizing = YES;
-        
-    } else {
-    
-        // For single clicks,
-        if([theEvent clickCount] == 1) {
-            if(([theEvent modifierFlags] & NSShiftKeyMask) && [self tableGrid].allowsMultipleSelection) {
-                // If the shift key was held down, extend the selection
-            } else {
-                // No modifier keys, so change the selection
-                if(self.orientation == MBTableHeaderHorizontalOrientation) {
-                    mouseDownItem = column;
-					
-					if ([[self tableGrid] _sortDirectionForColumn:column]) {
-						NSRect cellFrame = [self headerRectOfColumn:column];
-						NSCellHitResult hitResult = [self.headerCell hitTestForEvent:theEvent inRect:cellFrame ofView:self];
-						if (hitResult != NSCellHitNone) {
-							[[self tableGrid] sortButtonClickedOnColumn:column];
-						} else {
-							if([[self tableGrid].selectedColumnIndexes containsIndex:column] && [[self tableGrid].selectedRowIndexes count] == [self tableGrid].numberOfRows) {
-								// Allow the user to drag the column
-								shouldDragItems = YES;
+	[super updateTrackingAreas];
+	
+	if (self.orientation == MBTableHeaderHorizontalOrientation) {
+		// Draw the column headers
+		NSUInteger numberOfColumns = self.tableGrid.numberOfColumns;
+		[headerCell setOrientation:self.orientation];
+		NSUInteger column = 0;
+		
+//		BOOL rightToLeft = [[NSApplication sharedApplication] userInterfaceLayoutDirection] == NSUserInterfaceLayoutDirectionRightToLeft;
+		
+		while (column < numberOfColumns) {
+			NSRect headerRect = [self headerRectOfColumn:column];
+			
+			CGFloat cellWidth = NSWidth(headerRect);
+//			if (rightToLeft) {
+//				cellWidth = 0;
+//			}
+			
+			// Create new tracking area for resizing columns
+			NSRect resizeRect = NSMakeRect(NSMinX(headerRect) + cellWidth - 2, NSMinY(headerRect), 5, NSHeight(headerRect));
+			
+			if(CGRectIntersectsRect(resizeRect, self.visibleRect)) {
+				NSTrackingArea *resizeTrackingArea = [[NSTrackingArea alloc] initWithRect:resizeRect
+																				  options:(NSTrackingMouseEnteredAndExited | NSTrackingActiveAlways)
+																					owner:self
+																				 userInfo:@{@"column":@(column)}];
+				[self addTrackingArea:resizeTrackingArea];
+			}
+			
+			column++;
+		}
+	}
+}
+
+- (void)_mouseDown:(NSEvent *)theEvent right:(BOOL)rightMouse
+{
+	
+	if (!self.isEditable) {
+		[self.nextResponder mouseDown:theEvent];
+		
+	} else {
+		
+		// Get the location of the click
+		NSPoint loc = [self convertPoint:[theEvent locationInWindow] fromView:nil];
+		mouseDownLocation = loc;
+		NSInteger column = [[self tableGrid] columnAtPoint:[self convertPoint:loc toView:[self tableGrid]]];
+		NSInteger row = [[self tableGrid] rowAtPoint:[self convertPoint:loc toView:[self tableGrid]]];
+		
+		if (self.orientation == MBTableHeaderVerticalOrientation && [[self tableGrid] _isGroupRow:row]) {
+			return;
+		}
+		
+		if([theEvent clickCount] == 2 && !rightMouse) {
+			// Check if the double click happened on the separator between two columns. This separator has the "resizing" cursor.
+			// If so, grab the corresponding column and inform the delegate.
+			NSInteger columnWithResizingCursor = NSNotFound;
+			for (NSTrackingArea *trackingArea in self.trackingAreas) {
+				NSNumber *aColumn = trackingArea.userInfo[@"column"];
+				if (trackingArea.owner == self && CGRectContainsPoint(trackingArea.rect, loc) && aColumn != nil && [aColumn isKindOfClass:[NSNumber class]]) {
+					columnWithResizingCursor = aColumn.integerValue;
+					break;
+				}
+			}
+			if (columnWithResizingCursor != NSNotFound && [self.tableGrid.delegate respondsToSelector:@selector(tableGrid:didDoubleClickSeparatorForColumn:)]) {
+				[self.tableGrid.delegate tableGrid:self.tableGrid didDoubleClickSeparatorForColumn:columnWithResizingCursor];
+			} else if ([self.tableGrid.delegate respondsToSelector:@selector(tableGrid:didDoubleClickColumn:)]) {
+				[self.tableGrid.delegate tableGrid:self.tableGrid didDoubleClickColumn:column];
+			} else if (self.orientation == MBTableHeaderVerticalOrientation) {
+				mouseDownItem = row;
+				[[self tableGrid] doubleClickRow:row];
+			} else if (self.orientation == MBTableHeaderHorizontalOrientation) {
+				mouseDownItem = column;
+				[[self tableGrid] doubleClickColumn:column];
+			}
+			
+		} else {
+			
+			
+			if (canResize) {
+				
+				// Set resize column index
+				
+				draggingColumnIndex = [[self tableGrid] columnAtPoint:[self convertPoint:NSMakePoint(loc.x - 4, loc.y) toView:[self tableGrid]]];
+				
+				lastMouseDraggingLocation = loc;
+				isResizing = YES;
+				
+			} else {
+				
+				// For single clicks,
+				if([theEvent clickCount] == 1) {
+					if(([theEvent modifierFlags] & NSEventModifierFlagShift) && [self tableGrid].allowsMultipleSelection) {
+						// If the shift key was held down, extend the selection
+						if (self.orientation == MBTableHeaderHorizontalOrientation) {
+							// If the shift key was held down, extend the selection
+							NSUInteger stickyColumn = [self.tableGrid.selectedColumnIndexes firstIndex];
+							MBTableGridEdge stickyColumnEdge = [self.tableGrid _stickyColumn];
+							
+							// Compensate for sticky edges
+							if (stickyColumnEdge == MBTableGridRightEdge) {
+								stickyColumn = [self.tableGrid.selectedColumnIndexes lastIndex];
+							}
+							
+							// This happens when there is no selection in the grid
+							if (stickyColumn == NSNotFound) {
+								stickyColumn = column;
+							}
+							
+							NSRange selectionColumnRange = NSMakeRange(stickyColumn, column-stickyColumn+1);
+							
+							if (column < stickyColumn) {
+								selectionColumnRange = NSMakeRange(column, stickyColumn - column + 1);
+								stickyColumnEdge = MBTableGridRightEdge;
 							} else {
-								[self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndex:column];
-								// Select every row
-								
-								NSMutableIndexSet *indexSet = [[NSMutableIndexSet alloc] init];
-								NSInteger rowCount = [self tableGrid].numberOfRows;
-								
-								for (NSInteger row = 0; row < rowCount; row++) {
-									BOOL isGroupRow = [[[[self tableGrid] contentView] groupHeadingRowIndexes] objectForKey:@(row)] != nil;
-									if (!isGroupRow) {
-										[indexSet addIndex:row];
+								stickyColumnEdge = MBTableGridLeftEdge;
+							}
+							
+							if (selectionColumnRange.length == NSNotFound || selectionColumnRange.length > self.tableGrid.numberOfColumns) {
+								selectionColumnRange.length = self.tableGrid.numberOfColumns - selectionColumnRange.location;
+							}
+							
+							// Select the proper cells
+							self.tableGrid.selectedColumnIndexes = [NSIndexSet indexSetWithIndexesInRange:selectionColumnRange];
+							self.tableGrid.selectedRowIndexes = [NSMutableIndexSet indexSetWithIndexesInRange:NSMakeRange(0, self.tableGrid.numberOfRows)];
+							
+							// Set the sticky edges
+							[self.tableGrid _setStickyColumn:stickyColumnEdge row:[self.tableGrid _stickyRow]];
+						} else if (self.orientation == MBTableHeaderVerticalOrientation) {
+							// If the shift key was held down, extend the selection
+							NSUInteger stickyRow = [self.tableGrid.selectedRowIndexes firstIndex];
+							MBTableGridEdge stickyRowEdge = [self.tableGrid _stickyRow];
+							
+							// Compensate for sticky edges
+							if (stickyRowEdge == MBTableGridBottomEdge) {
+								stickyRow = [self.tableGrid.selectedRowIndexes lastIndex];
+							}
+							
+							// This happens when there is no selection in the grid
+							if (stickyRow == NSNotFound) {
+								stickyRow = row;
+							}
+							
+							NSRange selectionRowRange = NSMakeRange(stickyRow, row-stickyRow+1);
+							
+							if (row < stickyRow) {
+								selectionRowRange = NSMakeRange(row, stickyRow - row + 1);
+								stickyRowEdge = MBTableGridBottomEdge;
+							} else {
+								stickyRowEdge = MBTableGridTopEdge;
+							}
+							
+							if (selectionRowRange.location == NSNotFound) {
+								selectionRowRange.location = 0;
+							}
+							
+							// Select the proper cells
+							self.tableGrid.selectedRowIndexes = [NSMutableIndexSet indexSetWithIndexesInRange:selectionRowRange];
+							self.tableGrid.selectedColumnIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, self.tableGrid.numberOfColumns)];
+							
+							// Set the sticky edges
+							[self.tableGrid _setStickyColumn:[self.tableGrid _stickyColumn] row:stickyRowEdge];
+						}
+						
+					} else {
+						// No modifier keys, so change the selection
+						if(self.orientation == MBTableHeaderHorizontalOrientation) {
+							
+							// column can be not found if you clicked far to the right of all the columns.
+							if (column == NSNotFound) {
+								return;
+							}
+							
+							mouseDownItem = column;
+							
+							if ([[self tableGrid] _sortDirectionForColumn:column]) {
+								NSRect cellFrame = [self headerRectOfColumn:column];
+								NSCellHitResult hitResult = [self.headerCell hitTestForEvent:theEvent inRect:cellFrame ofView:self];
+								if (hitResult != NSCellHitNone) {
+									[[self tableGrid] sortButtonClickedOnColumn:column];
+								} else {
+									if([[self tableGrid].selectedColumnIndexes containsIndex:column] && [[self tableGrid].selectedRowIndexes count] == [self tableGrid].numberOfRows) {
+										// Allow the user to drag the column
+										shouldDragItems = YES;
+									} else {
+										[self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndex:column];
+										// Select every row
+										
+										NSMutableIndexSet *indexSet = [[NSMutableIndexSet alloc] init];
+										NSInteger rowCount = [self tableGrid].numberOfRows;
+										
+										for (NSInteger row = 0; row < rowCount; row++) {
+											BOOL isGroupRow = [[[[self tableGrid] contentView] groupHeadingRowIndexes] objectForKey:@(row)] != nil;
+											if (!isGroupRow) {
+												[indexSet addIndex:row];
+											}
+										}
+										
+										[self tableGrid].selectedRowIndexes = indexSet;
+										
 									}
 								}
-								
-								[self tableGrid].selectedRowIndexes = indexSet;
-								
+							}
+							
+							
+						} else if(self.orientation == MBTableHeaderVerticalOrientation) {
+							mouseDownItem = row;
+							
+							if([[self tableGrid].selectedRowIndexes containsIndex:row] && [[self tableGrid].selectedColumnIndexes count] == [self tableGrid].numberOfColumns) {
+								// Allow the user to drag the row
+								shouldDragItems = YES;
+							} else {
+								if (row >= 0 && row != NSNotFound) {
+									[self tableGrid].selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:row];
+								}
+								// Select every column
+								if ([self tableGrid].numberOfColumns != NSNotFound) {
+									[self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0,[self tableGrid].numberOfColumns)];
+								}
 							}
 						}
 					}
-					
-					
-				} else if(self.orientation == MBTableHeaderVerticalOrientation) {
-                    mouseDownItem = row;
-                    
-                    if([[self tableGrid].selectedRowIndexes containsIndex:row] && [[self tableGrid].selectedColumnIndexes count] == [self tableGrid].numberOfColumns) {
-                        // Allow the user to drag the row
-                        shouldDragItems = YES;
-                    } else {
-                        [self tableGrid].selectedRowIndexes = [NSMutableIndexSet indexSetWithIndex:row];
-                        // Select every column
-                        [self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0,[self tableGrid].numberOfColumns)];
-                    }
-                }
-            }
-        } else if ([theEvent clickCount] == 2) {
-			
+				} else if ([theEvent clickCount] == 2) {
+					if (self.orientation == MBTableHeaderVerticalOrientation) {
+						mouseDownItem = row;
+						[[self tableGrid] doubleClickRow:row];
+					} else if (self.orientation == MBTableHeaderHorizontalOrientation) {
+						mouseDownItem = column;
+						[[self tableGrid] doubleClickColumn:column];
+					}
+				}
+				
+				// Pass the event back to the MBTableGrid (Used to give First Responder status)
+				[[self tableGrid] mouseDown:theEvent];
+				
+			}
 		}
-        
-        // Pass the event back to the MBTableGrid (Used to give First Responder status)
-        [[self tableGrid] mouseDown:theEvent];
-        
-    }
+	}
+}
+
+- (void) mouseDown:(NSEvent *)theEvent {
+	[self _mouseDown:theEvent right:FALSE];
+}
+
+- (void) rightMouseDown:(NSEvent *)theEvent {
+	[self _mouseDown:theEvent right:TRUE];
+}
+
+- (void) rightMouseUp:(NSEvent *)theEvent {
+	[NSMenu popUpContextMenu:self.menu withEvent:theEvent forView:self];
 }
 
 - (void)mouseDragged:(NSEvent *)theEvent
@@ -319,7 +510,13 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 		
 		if (draggingColumnIndex != NSNotFound) {
 			CGFloat offset = [self.tableGrid resizeColumnWithIndex:draggingColumnIndex withDistance:dragDistance location:loc];
-			lastMouseDraggingLocation.x += offset;
+			BOOL rightToLeft = [[NSApplication sharedApplication] userInterfaceLayoutDirection] == NSUserInterfaceLayoutDirectionRightToLeft;
+			
+			if (rightToLeft) {
+				lastMouseDraggingLocation.x -= offset;
+			} else {
+				lastMouseDraggingLocation.x += offset;
+			}
 			
 			if (offset != 0.0) {
 				[[NSCursor resizeRightCursor] set];
@@ -367,10 +564,13 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
             if(itemUnderMouse < mouseDownItem) {
                 firstItemToSelect = itemUnderMouse;
                 numberOfItemsToSelect = mouseDownItem - itemUnderMouse + 1;
+				if (numberOfItemsToSelect < 0) {
+					numberOfItemsToSelect = 1;
+				}
             }
 			
 			// Set the selected items
-			if (firstItemToSelect != NSNotFound && firstItemToSelect >= 0 && numberOfItemsToSelect > 0 && numberOfItemsToSelect != NSNotFound) {
+			if (firstItemToSelect != NSNotFound && firstItemToSelect >= 0 && numberOfItemsToSelect > 0 && numberOfItemsToSelect != NSNotFound && numberOfItemsToSelect <= [self tableGrid].numberOfColumns) {
 				if (self.orientation == MBTableHeaderHorizontalOrientation) {
 					[self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(firstItemToSelect, numberOfItemsToSelect)];
 				} else if (self.orientation == MBTableHeaderVerticalOrientation) {
@@ -384,14 +584,14 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 
 - (void)mouseUp:(NSEvent *)theEvent
 {
-    
+	
     if (canResize) {
 		
 		[self autoSaveColumnProperties];
 		
 		NSString *draggedColumn = [NSString stringWithFormat:@"C-%lu", draggingColumnIndex];
 		
-		NSNumber *width = columnAutoSaveProperties[draggedColumn][kAutosavedColumnWidthKey];
+		NSNumber *width = self.columnAutoSaveProperties[draggedColumn][kAutosavedColumnWidthKey];
 		NSDictionary *userInfo = nil;
 		
 		if (width) {
@@ -420,6 +620,11 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
         
         // If we only clicked on a header that was part of a bigger selection, select it
         if(shouldDragItems && !isInDrag) {
+			
+			if (mouseDownItem == NSNotFound) {
+				return;
+			}
+			
             if (self.orientation == MBTableHeaderHorizontalOrientation) {
                 [self tableGrid].selectedColumnIndexes = [NSIndexSet indexSetWithIndex:mouseDownItem];
                 // Select every row
@@ -490,24 +695,26 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
 }
 
 - (void)autoSaveColumnProperties {
-    if (!columnAutoSaveProperties && [[[self tableGrid] delegate] respondsToSelector:@selector(tableGridAutosavedColumnProperties:)]) {
-        columnAutoSaveProperties = [[[[self tableGrid] delegate] tableGridAutosavedColumnProperties:[self tableGrid]] mutableCopy];
+    if (!self.columnAutoSaveProperties && [[[self tableGrid] delegate] respondsToSelector:@selector(tableGridAutosavedColumnProperties:)]) {
+        self.columnAutoSaveProperties = [[[[self tableGrid] delegate] tableGridAutosavedColumnProperties:[self tableGrid]] mutableCopy];
     }
     
-	if (!columnAutoSaveProperties) {
-		columnAutoSaveProperties = [NSMutableDictionary dictionary];
+	if (!self.columnAutoSaveProperties) {
+		self.columnAutoSaveProperties = [NSMutableDictionary dictionary];
 	}
+	
+	__weak MBTableGridHeaderView *weakSelf = self;
 	
 	[self.tableGrid.columnRects enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
 		NSValue *rectValue = obj;
 		NSRect rect = [rectValue rectValue];
 		NSDictionary *columnDict = @{kAutosavedColumnWidthKey : @(rect.size.width),
 									 kAutosavedColumnHiddenKey : @NO};
-		columnAutoSaveProperties[[NSString stringWithFormat:@"C-%@", key]] = columnDict;
+		weakSelf.columnAutoSaveProperties[[NSString stringWithFormat:@"C-%@", key]] = columnDict;
 	}];
 	
 	if (self.autosaveName && [[[self tableGrid] delegate] respondsToSelector:@selector(tableGrid:didAutosaveColumnProperties:)]) {
-        [[[self tableGrid] delegate] tableGrid:[self tableGrid] didAutosaveColumnProperties:columnAutoSaveProperties.mutableCopy];
+        [[[self tableGrid] delegate] tableGrid:[self tableGrid] didAutosaveColumnProperties:self.columnAutoSaveProperties.mutableCopy];
 	}
 }
 
@@ -526,7 +733,10 @@ NSString* kAutosavedColumnHiddenKey = @"AutosavedColumnHidden";
         
         self.cachedTableGrid = (MBTableGrid *)scrollView.superview;
     }
-    
+	
+	if (![self.cachedTableGrid isKindOfClass:[MBTableGrid class]]) {
+		return nil;
+	}
     return self.cachedTableGrid;
 }
 

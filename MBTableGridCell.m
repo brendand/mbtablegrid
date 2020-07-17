@@ -25,7 +25,6 @@
 
 #import "MBTableGridCell.h"
 
-
 @implementation MBTableGridCell
 
 -(id)initTextCell:(NSString *)aString
@@ -34,34 +33,43 @@
     
     if (self)
     {
-        [self setBackgroundColor:[NSColor clearColor]];
 		self.truncatesLastVisibleLine = YES;
+		self.drawsBackground = NO;
+		
+		if (@available(macOS 10.13, *)) {
+			self.borderColor = [NSColor colorNamed:@"grid-line"];
+		} else {
+			self.borderColor = [NSColor gridColor];
+		}
+		
         return self;
     }
     
     return nil;
 }
 
-- (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView withBackgroundColor:(NSColor *)backgroundColor
+- (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView withBackgroundColor:(NSColor *)backgroundColor textColor:(NSColor *)textColor
 {
 
 	[backgroundColor set];
 	NSRectFill(cellFrame);
-    
+	
+	self.textColor = textColor;
+	
     [self drawWithFrame:cellFrame inView:controlView];
 }
 
 - (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView
 {
-    
-	NSColor *borderColor = [NSColor colorWithDeviceWhite:0.83 alpha:1.0];
-	[borderColor set];
 	
 	// Draw the right border
+
+	[self.borderColor set];
 	NSRect rightLine = NSMakeRect(NSMaxX(cellFrame)-1.0, NSMinY(cellFrame), 1.0, NSHeight(cellFrame));
 	NSRectFill(rightLine);
 	
 	// Draw the bottom border
+
 	NSRect bottomLine = NSMakeRect(NSMinX(cellFrame), NSMaxY(cellFrame)-1.0, NSWidth(cellFrame), 1.0);
 	NSRectFill(bottomLine);
 	
@@ -72,13 +80,14 @@
 		accessoryButtonFrame.origin.x = cellFrame.origin.x + cellFrame.size.width - accessoryButtonFrame.size.width - 4;
 		
 		// adjust rect for top border
-		accessoryButtonFrame.origin.y += 1;
+
+		accessoryButtonFrame.origin.y = cellFrame.origin.y + ceilf(cellFrame.size.height / 2) - ceilf(self.accessoryButtonImage.size.height / 2);
 		
 		// draw the accessory image
 		
 		[self.accessoryButtonImage drawInRect:accessoryButtonFrame
 									 fromRect:NSZeroRect
-									operation:NSCompositeSourceOver
+									operation:NSCompositingOperationSourceOver
 									 fraction:1.0
 							   respectFlipped:YES
 										hints:nil];
@@ -105,6 +114,12 @@
 {
 	// Do not draw any highlight.
 	return nil;
+}
+
+- (NSText *)setUpFieldEditorAttributes:(NSText *)textObj {
+	NSText *text = [super setUpFieldEditorAttributes:textObj];
+	text.backgroundColor = [NSColor textBackgroundColor];
+	return text;
 }
 
 - (NSCellHitResult)hitTestForEvent:(NSEvent *)event inRect:(NSRect)cellFrame ofView:(NSView *)controlView {

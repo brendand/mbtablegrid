@@ -28,6 +28,7 @@
 #import "MBTableGridContentView.h"
 #import "MBFooterTextCell.h"
 #import "MBLevelIndicatorCell.h"
+#import "MBTableGridFooterCell.h"
 
 @interface MBTableGrid ()
 - (MBTableGridContentView *)_contentView;
@@ -48,7 +49,7 @@
 {
     if(self = [super initWithFrame:frameRect]) {
         _defaultCell = [[MBFooterTextCell alloc] initTextCell:@""];
-        [_defaultCell setBordered:YES];
+        [_defaultCell setBordered:NO];
     }
     return self;
 }
@@ -58,8 +59,8 @@
 	// Draw the column footers
 	NSUInteger numberOfColumns = [self tableGrid].numberOfColumns;
 	NSUInteger column = 0;
-    NSColor *backgroundColor = [NSColor colorWithCalibratedWhite:0.91 alpha:1.0];
-    
+	NSColor *backgroundColor = [NSColor windowBackgroundColor];
+	
 	while (column < numberOfColumns) {
 		NSRect cellFrame = [self footerRectOfColumn:column];
 		
@@ -75,8 +76,9 @@
             
             if ([_cell isKindOfClass:[MBFooterPopupButtonCell class]]) {
                 MBFooterPopupButtonCell *cell = (MBFooterPopupButtonCell *)_cell;
-                NSInteger index = [cell indexOfItemWithTitle:objectValue];
+				NSInteger index = [cell indexOfItemWithTitle:objectValue];
                 [_cell setObjectValue:@(index)];
+				
             } else {
                 [_cell setObjectValue:objectValue];
             }
@@ -102,15 +104,21 @@
                 
             } else {
                 
-                MBTableGridCell *cell = (MBTableGridCell *)_cell;
+                MBTableGridFooterCell *cell = (MBTableGridFooterCell *)_cell;
                 
-                [cell drawWithFrame:cellFrame inView:self withBackgroundColor:backgroundColor];// Draw background color
+				[cell drawWithFrame:cellFrame inView:self withBackgroundColor:backgroundColor textColor:[NSColor labelColor]];// Draw background color
                 
             }
             
-            NSColor *sideColor = [NSColor colorWithDeviceWhite:1.0 alpha:0.4];
-            NSColor *borderColor = [NSColor colorWithDeviceWhite:0.8 alpha:1.0];
-            
+			NSColor *sideColor = [NSColor windowBackgroundColor];
+
+			NSColor *borderColor = nil;
+			if (@available(macOS 10.13, *)) {
+				borderColor = [NSColor colorNamed:@"grid-line"];
+			} else {
+				borderColor = [NSColor gridColor];
+			}
+			
             if (!isFrozenColumn) {
                 // Draw the side bevels
                 NSRect sideLine = NSMakeRect(NSMinX(cellFrame), NSMinY(cellFrame), 1.0, NSHeight(cellFrame));
@@ -126,17 +134,18 @@
             }
             
             // Draw the bottom border
-            NSRect bottomLine = NSMakeRect(NSMinX(cellFrame), NSMaxY(cellFrame)-1.0, NSWidth(cellFrame), 1.0);
-            NSRectFill(bottomLine);
-            
-            // Draw the top border
-            NSRect topLine = NSMakeRect(NSMinX(cellFrame), 0, NSWidth(cellFrame), 1.0);
-            NSRectFill(topLine);
+//            NSRect bottomLine = NSMakeRect(NSMinX(cellFrame), NSMaxY(cellFrame)-1.0, NSWidth(cellFrame), 1.0);
+//            NSRectFill(bottomLine);
+			
+
 		}
 		
 		column++;
 	}
 	
+	// Draw the top border
+	NSRect topLine = NSMakeRect(NSMinX(rect), 0, NSWidth(rect), 1.0);
+	NSRectFill(topLine);
 }
 
 - (void)updateLevelIndicator:(NSNumber *)value {
@@ -162,7 +171,7 @@
     NSPoint mouseLocationInContentView = [self convertPoint:[theEvent locationInWindow] fromView:nil];
     NSInteger mouseDownColumn = [self footerColumnAtPoint:mouseLocationInContentView];
     
-    if (theEvent.clickCount == 1) {
+    if (theEvent.clickCount == 1 && !self.isHidden) {
         // Pass the event back to the MBTableGrid (Used to give First Responder status)
         [[self tableGrid] mouseDown:theEvent];
         
@@ -193,7 +202,7 @@
 			
 			NSRect popupRect = cellFrame;
 			popupRect.origin.x += cellFrame.size.width - editedPopupCell.menu.size.width;
-			editedPopupCell.menu.font = [NSFont systemFontOfSize:[NSFont systemFontSizeForControlSize:NSSmallControlSize]];
+			editedPopupCell.menu.font = [NSFont systemFontOfSize:[NSFont systemFontSizeForControlSize:NSControlSizeSmall]];
             [editedPopupCell.menu popUpMenuPositioningItem:editedPopupCell.selectedItem atLocation:popupRect.origin inView:self];
         }
     }
@@ -215,7 +224,7 @@
     [editedPopupCell selectItemWithTitle:menuItem.title];
     [editedPopupCell synchronizeTitleAndSelectedItem];
     
-    [[self tableGrid] _setFooterValue:menuItem.title forColumn:editedColumn];
+    [[self tableGrid] _setFooterValue:menuItem.representedObject forColumn:editedColumn];
     
     NSRect cellFrame = [self footerRectOfColumn:editedColumn];
     [[self tableGrid] setNeedsDisplayInRect:cellFrame];

@@ -34,10 +34,17 @@
     
 }
 
+/**
+ * @brief		The color to draw the grid lines.
+ *				Defaults to [NSColor.gridColor colorWithAlphaComponent:0.5].
+ */
+@property (nonatomic, strong) NSColor *borderColor;
+
 @property (nonatomic, strong) NSImage *accessoryButtonImage;
 @property (nonatomic) BOOL editWithPopupMenu;
 @property (nonatomic) BOOL isGroupRow;
+@property (nonatomic) BOOL isLastColumn;
 
-- (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView withBackgroundColor:(NSColor *)backgroundColor;
+- (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView withBackgroundColor:(NSColor *)backgroundColor  textColor:(NSColor *)textColor;
 
 @end

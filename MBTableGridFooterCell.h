@@ -33,5 +33,6 @@
 @interface MBTableGridFooterCell : MBPopupButtonCell {
 }
 
+@property (nonatomic) BOOL drawBottomLine;
 
 @end

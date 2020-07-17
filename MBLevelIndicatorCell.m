@@ -10,6 +10,7 @@
 
 @interface MBLevelIndicatorCell()
 @property (nonatomic, weak) NSView *theControlView;
+@property (nonatomic, strong) NSColor *borderColor;
 @end
 
 @implementation MBLevelIndicatorCell
@@ -19,13 +20,18 @@
 	if (self) {
 		self.selectable = YES;
 		self.editable = YES;
+		if (@available(macOS 10.13, *)) {
+			self.borderColor = [NSColor colorNamed:@"grid-line"];
+		} else {
+			self.borderColor = [NSColor gridColor];
+		}
 	}
 	return self;
 }
 
--(BOOL)isHighlighted {
-	return YES;
-}
+//-(BOOL)isHighlighted {
+//	return YES;
+//}
 
 #pragma mark - MBTableGridEditable
 
@@ -36,19 +42,22 @@
 - (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView withBackgroundColor:(NSColor *)backgroundColor {
 	[backgroundColor set];
 	NSRectFill(cellFrame);
+	
 	[self drawWithFrame:cellFrame inView:controlView];
 }
 
 - (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView {
 	
-	[super drawWithFrame:cellFrame inView:controlView];
-
-	NSColor *borderColor = [NSColor colorWithDeviceWhite:0.83 alpha:1.0];
-	[borderColor set];
+	NSRect rect = cellFrame;
+	rect.origin.y -= 2;
+	rect.origin.x += 4;
+	[super drawWithFrame:rect inView:controlView];
 	
-	// Draw the right border
+	[self.borderColor set];
+	
 	NSRect rightLine = NSMakeRect(NSMaxX(cellFrame)-1.0, NSMinY(cellFrame), 1.0, NSHeight(cellFrame));
 	NSRectFill(rightLine);
+	
 	
 	// Draw the bottom border
 	NSRect bottomLine = NSMakeRect(NSMinX(cellFrame), NSMaxY(cellFrame)-1.0, NSWidth(cellFrame), 1.0);

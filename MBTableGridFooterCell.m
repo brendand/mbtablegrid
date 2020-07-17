@@ -27,6 +27,28 @@
 
 @implementation MBTableGridFooterCell
 
+- (void)drawMyInteriorWithFrame:(NSRect)cellFrame inView:(NSView *)controlView
+{
+	static CGFloat TEXT_PADDING = 6;
+	NSRect textFrame;
+	NSAttributedString *stringValue = [self attributedStringValue];
+	CGSize stringSize = stringValue.size;
+	textFrame = NSMakeRect(cellFrame.origin.x + TEXT_PADDING, cellFrame.origin.y + (cellFrame.size.height - stringSize.height)/2, cellFrame.size.width - TEXT_PADDING, stringSize.height);
+	
+	[[NSGraphicsContext currentContext] saveGraphicsState];
+	
+	NSShadow *textShadow = [[NSShadow alloc] init];
+	[textShadow setShadowOffset:NSMakeSize(0,-1)];
+	[textShadow setShadowBlurRadius:0.0];
+	[textShadow setShadowColor:[NSColor colorWithDeviceWhite:1.0 alpha:0.8]];
+	[textShadow set];
+	
+	[stringValue drawWithRect:textFrame options:NSStringDrawingTruncatesLastVisibleLine | NSStringDrawingUsesLineFragmentOrigin];
+	
+	[[NSGraphicsContext currentContext] restoreGraphicsState];
+	
+}
+
 - (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView {
 	
 	NSColor *sideColor = [NSColor colorWithDeviceWhite:1.0 alpha:0.4];
@@ -40,20 +62,24 @@
 	[[NSBezierPath bezierPathWithRect:sideLine] fill];
 	
 	// Draw the right border
-	NSRect borderLine = NSMakeRect(NSMaxX(cellFrame)-1, NSMinY(cellFrame), 1.0, NSHeight(cellFrame));
 	[borderColor set];
-	NSRectFill(borderLine);
-	
-	// Draw the bottom border
-	NSRect bottomLine = NSMakeRect(NSMinX(cellFrame), NSMaxY(cellFrame)-1.0, NSWidth(cellFrame), 1.0);
-	NSRectFill(bottomLine);
+//	BOOL rightToLeft = [[NSApplication sharedApplication] userInterfaceLayoutDirection] == NSUserInterfaceLayoutDirectionRightToLeft;
+//
+//	if (rightToLeft) {
+//		NSRect leftLine = NSMakeRect(NSMinX(cellFrame), NSMinY(cellFrame), 1.0, NSHeight(cellFrame));
+//		NSRectFill(leftLine);
+//	} else {
+		NSRect rightLine = NSMakeRect(NSMaxX(cellFrame)-1.0, NSMinY(cellFrame), 1.0, NSHeight(cellFrame));
+		NSRectFill(rightLine);
+//	}
+
 
 	// Draw the top border
 	NSRect topLine = NSMakeRect(NSMinX(cellFrame), 0, NSWidth(cellFrame), 1.0);
 	NSRectFill(topLine);
 
 	
-	if([self state] == NSOnState) {
+	if ([self state] == NSOnState) {
 		NSBezierPath *path = [NSBezierPath bezierPathWithRect:cellFrame];
 		NSColor *overlayColor = [[NSColor alternateSelectedControlColor] colorWithAlphaComponent:0.2];
 		[overlayColor set];
@@ -61,38 +87,20 @@
 	}
 	
 	// Draw the text
-	[self drawInteriorWithFrame:cellFrame inView:controlView];
+	[self drawMyInteriorWithFrame:cellFrame inView:controlView];
+	
+	// Draw the bottom border
+	if (self.drawBottomLine) {
+		NSRect bottomLine = NSMakeRect(NSMinX(cellFrame), NSMaxY(cellFrame)-1.0, NSWidth(cellFrame), 1.0);
+		NSRectFill(bottomLine);
+	}
+
 }
 
 - (NSAttributedString *)attributedStringValue {
-	NSFont *font = [NSFont labelFontOfSize:[NSFont labelFontSize]];
-	NSColor *color = [NSColor controlTextColor];
-	NSDictionary *attributes = @{ NSFontAttributeName: font, NSForegroundColorAttributeName: color };
+	NSDictionary *attributes = @{ NSFontAttributeName: self.font, NSForegroundColorAttributeName: self.textColor };
 
 	return [[NSAttributedString alloc] initWithString:[self stringValue] attributes:attributes];
 }
-
-- (void)drawInteriorWithFrame:(NSRect)cellFrame inView:(NSView *)controlView
-{
-	static CGFloat TEXT_PADDING = 6;
-	NSRect textFrame;
-	CGSize stringSize = self.attributedStringValue.size;
-	textFrame = NSMakeRect(cellFrame.origin.x + TEXT_PADDING, cellFrame.origin.y + (cellFrame.size.height - stringSize.height)/2, cellFrame.size.width - TEXT_PADDING, stringSize.height);
-
-	[[NSGraphicsContext currentContext] saveGraphicsState];
-
-	NSShadow *textShadow = [[NSShadow alloc] init];
-	[textShadow setShadowOffset:NSMakeSize(0,-1)];
-	[textShadow setShadowBlurRadius:0.0];
-	[textShadow setShadowColor:[NSColor colorWithDeviceWhite:1.0 alpha:0.8]];
-	[textShadow set];
-
-	[self.attributedStringValue drawWithRect:textFrame options:NSStringDrawingTruncatesLastVisibleLine | NSStringDrawingUsesLineFragmentOrigin];
-	
-	[[NSGraphicsContext currentContext] restoreGraphicsState];
-	
-}
-
-
 
 @end

@@ -36,7 +36,7 @@ typedef enum _MBTableGridHeaderOrientation {
  *				responsible for drawing column and
  *				row headers.
  */
-@interface MBTableGridHeaderCell : NSCell {
+@interface MBTableGridHeaderCell : NSTextFieldCell {
 	MBTableGridHeaderOrientation orientation;
 }
 
@@ -56,6 +56,21 @@ typedef enum _MBTableGridHeaderOrientation {
 
 @property (nonatomic, strong) NSImage *sortIndicatorImage;
 
+@property (nonatomic, strong) NSTrackingArea *resizeTrackingArea;
+
 @property (nonatomic, strong) NSColor *rowTagColor;
+
+@property (nonatomic, strong) NSColor *borderColor;
+
+@property (nonatomic) BOOL isGroupRow;
+@property (nonatomic) BOOL isGroupSummaryRow;
+
+
+/**
+ * @brief		Sets the default font to use for content cells
+ *
+ */
+@property(nonatomic, strong) NSFont *defaultCellFont;
+
 
 @end

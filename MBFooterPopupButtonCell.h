@@ -33,6 +33,8 @@
 @interface MBFooterPopupButtonCell : NSPopUpButtonCell {
 }
 
+@property (nonatomic) BOOL drawBottomLine;
+
 - (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView withBackgroundColor:(NSColor *)backgroundColor;
 
 @end
